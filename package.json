@@ -1,6 +1,6 @@
 {
 	"name": "d1-template",
-	"description": "Cloudflare's native serverless SQL database.",
+	"description": "Houston Next 30 independent artist chart powered by D1.",
 	"cloudflare": {
 		"label": "Worker + D1 Database",
 		"products": [
