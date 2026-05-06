@@ -1,10 +1,11 @@
 import { api } from "./api";
 import { ensureDatabase } from "./bootstrap";
 import { artistBySlug, currentChart, recalculateChart, songBySlug } from "./db";
+import { fallbackArtistBySlug, fallbackChart, fallbackNews, fallbackSongBySlug } from "./fallback";
 import { aboutPage, adminPage, adminSection, artistPage, chartPage, hero, layout, newsPage, songPage, submitPage } from "./renderHtml";
-import { html, readBody, requestHashes, str } from "./security";
+import { html, json, readBody, requestHashes, str } from "./security";
 
-async function handle(request: Request, env: Env) {
+async function route(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const hashes = await requestHashes(request, "houston-indie-30");
 	const ctx = { request, env, url, sessionId: hashes.sessionId, ipHash: hashes.ipHash, userAgentHash: hashes.userAgentHash };
@@ -36,7 +37,41 @@ async function handle(request: Request, env: Env) {
 	if (hashes.setCookie) response.headers.append("set-cookie", hashes.setCookie);
 	return response;
 }
+
+async function handle(request: Request, env: Env) {
+	try {
+		return await route(request, env);
+	} catch (error) {
+		console.error("Houston Indie 30 request failed; serving fallback", error);
+		return fallbackResponse(request);
+	}
+}
+
+function fallbackResponse(request: Request) {
+	const url = new URL(request.url);
+	const path = url.pathname;
+	const fallbackMessage = "Houston Indie 30 is running in preview mode while the database binding or migrations are being initialized.";
+	if (path === "/api/chart/current") return json(fallbackChart);
+	if (path === "/api/chart/history") return json([]);
+	if (path === "/api/artists") return json(fallbackChart);
+	if (path.startsWith("/api/artists/")) return json(fallbackArtistBySlug(path.split("/").pop() || "") ?? { error: "Not found", fallback: true }, path ? 200 : 404);
+	if (path.startsWith("/api/songs/") && path.includes("/stream/")) return json({ ok: false, fallback: true, message: "Stream tracking is temporarily unavailable in preview mode." }, 202);
+	if (path.startsWith("/api/songs/") && path.endsWith("/download")) return json({ error: "Downloads are temporarily unavailable in preview mode." }, 503);
+	if (path.startsWith("/api/songs/")) return json(fallbackSongBySlug(path.split("/").pop() || "") ?? { error: "Not found", fallback: true });
+	if (path === "/api/rss/items") return json(fallbackNews);
+	if (path.startsWith("/api/")) return json({ error: fallbackMessage, fallback: true }, 503);
+	if (path === "/") return html(hero(fallbackChart.slice(0, 6)));
+	if (path === "/chart") return html(chartPage(fallbackChart));
+	if (path.startsWith("/artist/")) { const data = fallbackArtistBySlug(path.split("/").pop() || ""); return data ? html(artistPage(data.artist, data.songs)) : html(layout("Not found", "<h1>Artist not found</h1>"), 404); }
+	if (path.startsWith("/song/")) { const data = fallbackSongBySlug(path.split("/").pop() || ""); return data ? html(songPage(data)) : html(layout("Not found", "<h1>Song not found</h1>"), 404); }
+	if (path === "/submit") return html(submitPage());
+	if (path === "/about") return html(aboutPage());
+	if (path.startsWith("/news")) return html(newsPage(fallbackNews, "Music News"));
+	if (path.startsWith("/admin")) return html(adminPage());
+	return html(layout("Preview mode", `<section class="page"><h1>Preview mode</h1><p>${fallbackMessage}</p><a class="btn" href="/chart">View fallback chart</a></section>`), 200);
+}
+
 export default {
 	fetch: handle,
-	async scheduled(_event, env) { await ensureDatabase(env.DB); await recalculateChart(env.DB); }
+	async scheduled(_event, env) { try { await ensureDatabase(env.DB); await recalculateChart(env.DB); } catch (error) { console.error("Scheduled chart recalculation skipped", error); } }
 } satisfies ExportedHandler<Env>;
