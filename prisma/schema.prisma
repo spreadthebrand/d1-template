@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String?
+  authProviderId String?
+  role           String   @default("admin")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Artist {
+  id                  String             @id @default(cuid())
+  name                String
+  slug                String             @unique
+  bio                 String
+  imageUrl            String
+  genre               String
+  city                String             @default("Houston")
+  neighborhood        String
+  socialLinks         Json               @default("{}")
+  streamingLinks      Json               @default("{}")
+  isMainstream        Boolean            @default(false)
+  isApproved          Boolean            @default(false)
+  editorialScore      Int                @default(0)
+  localRelevanceScore Int                @default(0)
+  songs               Song[]
+  chartEntries        ChartEntry[]
+  streamLogs          StreamLog[]
+  downloadLogs        DownloadLog[]
+  externalClickLogs   ExternalClickLog[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([slug])
+  @@index([isApproved, isMainstream])
+}
+
+model Song {
+  id                  String             @id @default(cuid())
+  artistId            String
+  artist              Artist             @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  title               String
+  slug                String             @unique
+  audioUrl            String?
+  downloadableFileUrl String?
+  coverArtUrl         String?
+  isDownloadEnabled   Boolean            @default(false)
+  downloadCount       Int                @default(0)
+  streamCount         Int                @default(0)
+  uniqueListenerCount Int                @default(0)
+  externalClickCount  Int                @default(0)
+  submittedAt         DateTime           @default(now())
+  approvedAt          DateTime?
+  isApproved          Boolean            @default(false)
+  streamLogs          StreamLog[]
+  downloadLogs        DownloadLog[]
+  externalClickLogs   ExternalClickLog[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([slug])
+  @@index([artistId])
+  @@index([isApproved])
+}
+
+model ChartEntry {
+  id               String   @id @default(cuid())
+  artistId         String
+  artist           Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  rank             Int
+  previousRank     Int?
+  movement         String   @default("new")
+  score            Float
+  weekStartDate    DateTime
+  weekEndDate      DateTime
+  isManualOverride Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([weekStartDate, weekEndDate, rank])
+  @@index([artistId, weekStartDate])
+}
+
+model Submission {
+  id                   String   @id @default(cuid())
+  artistName           String
+  contactEmail         String
+  songTitle            String
+  genre                String
+  neighborhood         String
+  bio                  String
+  socialLinks          Json     @default("{}")
+  streamingLinks       Json     @default("{}")
+  audioFile            String?
+  coverArt             String?
+  permissionToStream   Boolean  @default(false)
+  permissionToDownload Boolean  @default(false)
+  status               String   @default("pending")
+  adminNotes           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model RSSSource {
+  id        String   @id @default(cuid())
+  name      String
+  url       String   @unique
+  category  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RSSItem {
+  id          String   @id @default(cuid())
+  title       String
+  source      String
+  link        String   @unique
+  description String?
+  imageUrl    String?
+  publishedAt DateTime
+  category    String
+  createdAt   DateTime @default(now())
+
+  @@index([publishedAt])
+  @@index([category, publishedAt])
+}
+
+model StreamLog {
+  id              String   @id @default(cuid())
+  songId          String
+  song            Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  artistId        String
+  artist          Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  sessionId       String
+  ipHash          String
+  userAgentHash   String
+  listenedSeconds Int      @default(0)
+  counted         Boolean  @default(false)
+  isSuspicious    Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([songId, artistId, createdAt])
+  @@index([songId, sessionId, createdAt])
+}
+
+model DownloadLog {
+  id            String   @id @default(cuid())
+  songId        String
+  song          Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  artistId      String
+  artist        Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  sessionId     String
+  ipHash        String
+  userAgentHash String
+  createdAt     DateTime @default(now())
+
+  @@index([songId, artistId, createdAt])
+}
+
+model ExternalClickLog {
+  id        String   @id @default(cuid())
+  artistId  String
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  songId    String?
+  song      Song?    @relation(fields: [songId], references: [id], onDelete: SetNull)
+  platform  String
+  url       String
+  sessionId String
+  ipHash    String
+  createdAt DateTime @default(now())
+
+  @@index([platform, createdAt])
+  @@index([artistId, createdAt])
+}
