@@ -1,59 +1,100 @@
-# Worker + D1 Database
+# 1SV Fast Trade AI
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+1SV Fast Trade AI is a mobile-first PWA for manually analyzing Pocket Option-style binary-options chart context, generating disciplined **CALL / PUT / WAIT / NO TRADE / LOCKED** signals, and journaling outcomes. It is built as a Cloudflare Worker single-page app with TypeScript, LocalStorage persistence, install support, optional Telegram alerts, and no real-money execution.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+> **Educational trading assistant only. Trading is risky. This app does not provide financial advice and does not guarantee results.**
 
-<!-- dash-content-start -->
+## Safety boundaries
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+- The app **does not auto-place trades**.
+- The app **does not connect to brokers**.
+- The app **does not request or store Pocket Option credentials**.
+- Telegram bot token and chat ID are optional and stored locally in the browser only.
+- Signal logic can return `LOCKED` whenever hard risk rules are hit.
+- Binary options, especially very short expiries, can lose money quickly; offshore or unregulated brokers can add custody, pricing, payout, and withdrawal risks.
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+## Core features
+
+- Premium black/gold mobile command-center UI with large thumb-friendly controls.
+- Home dashboard with status, daily P/L, target, max loss, trade count, streaks, selected model, latest signal, confidence, expiry, reason, checklist, and next action.
+- Manual signal input for trend, candles, ZigZag, stochastic, EMA, Bollinger Band, support/resistance, trendline, momentum, and wick context.
+- Five switchable trading models:
+  - **Model A:** 1SV ZigZag Stochastic Scalper.
+  - **Model B:** 1SV 3-Second Flick Model.
+  - **Model C:** 1SV Slide Pullback Model.
+  - **Model D:** 1SV Reversal Reach Model.
+  - **Model E:** 1SV Elon Mode / Systems Mode.
+- Risk control engine with daily target, max loss, max trades, max loss streak, pause-after-win-streak, no martingale guidance, no doubling after losses, and trade-size guide.
+- Trade journal with daily/weekly win rate, best/worst model, best asset, average P/L, loss warnings, optional screenshot filename, notes, and CSV export.
+- Visual education cards for Flick, Slide, Reach, and Choppy market states.
+- Optional Telegram alerts for High confidence signals only.
+- PWA manifest and service worker for install/offline fallback.
+
+## Tech stack
+
+- Cloudflare Workers
+- TypeScript
+- Vanilla single-page app served from the Worker
+- LocalStorage persistence
+- PWA manifest + service worker
+- Optional Telegram Bot API integration
+
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Run the local Worker dev server:
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+```bash
+npm run dev
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+Run type-check and Cloudflare dry-run validation:
 
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+```bash
+npm run check
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+Deploy to Cloudflare Workers:
 
-## Setup Steps
+```bash
+npm run deploy
+```
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+## Configuration
+
+The Admin / Settings screen lets you adjust:
+
+- Profit target
+- Max daily loss
+- Max trades per day
+- Max loss streak
+- Pause after win streak
+- Account balance used for recommended trade size
+- Preferred timeframe
+- Preferred expiry
+- Enabled models
+- Telegram bot token and chat ID
+- Daily reset
+- CSV export through the journal screen
+
+## Signal discipline
+
+The signal engine deliberately combines model-specific setup logic with the risk-control engine. A model setup can be valid and still be overridden by `WAIT`, `NO TRADE`, or `LOCKED` if the market is extended, choppy, missing confirmation, or outside the configured daily risk plan.
+
+Every signal returns:
+
+- Signal: `CALL`, `PUT`, `WAIT`, `NO TRADE`, or `LOCKED`
+- Confidence: `Low`, `Medium`, or `High`
+- Expiry recommendation
+- Plain-English reason
+- Checklist for trend, candle, stochastic, ZigZag, support/resistance, and risk status
+- Next action: `ENTER`, `WAIT`, `STOP`, or `DEMO ONLY`
+
+## Deployment notes
+
+This repository started from a Cloudflare D1 template, but the app itself uses browser LocalStorage for the trading journal and settings. The existing Worker configuration remains deployable to Cloudflare. No Supabase or broker integration is required.
