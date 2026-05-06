@@ -21,6 +21,8 @@ type Collaborator = {
 	masterPercent?: number;
 	publishingPercent?: number;
 	signed?: boolean;
+	signatureName?: string;
+	signedAt?: string;
 };
 
 type SheetPayload = {
@@ -216,6 +218,8 @@ function normalizeCollaborators(collaborators: Collaborator[]): Required<Collabo
 		masterPercent: clampPercent(person.masterPercent),
 		publishingPercent: clampPercent(person.publishingPercent),
 		signed: Boolean(person.signed),
+		signatureName: sanitizeText(person.signatureName),
+		signedAt: sanitizeText(person.signedAt),
 	}));
 }
 

@@ -95,6 +95,9 @@ export function renderHtml(options: RenderOptions = {}) {
 		input:focus, select:focus { border-color: rgba(124,58,237,.5); box-shadow: 0 0 0 4px rgba(124,58,237,.11); }
 		.collab-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 24px 0 12px; }
 		.split-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: #fbfcff; }
+		.signature-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0 0; padding: 12px; border: 1px dashed rgba(124,58,237,.35); border-radius: 16px; background: #f8f5ff; }
+		.signature-tools .field { flex: 1 1 220px; }
+		.signature-stamp { color: #4c1d95; font-size: .82rem; font-weight: 900; }
 		.tool-note { flex: 1 1 260px; color: var(--muted); font-size: .86rem; font-weight: 750; line-height: 1.45; }
 		.collab-table { display: grid; gap: 12px; }
 		.collab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
@@ -225,7 +228,9 @@ export function renderHtml(options: RenderOptions = {}) {
 							<div class="hero-actions action-bar">
 								<button class="button button-primary" id="saveSheet" type="button">Save split sheet</button>
 								<button class="button button-secondary" id="saveDownloadSheet" type="button">Save + download</button>
-								<button class="button button-secondary" id="downloadSheet" type="button">Download draft</button>
+								<button class="button button-secondary" id="downloadForSigning" type="button">Download to sign</button>
+								<button class="button button-secondary" id="emailForSigning" type="button">Send to sign</button>
+								<button class="button button-secondary" id="downloadSheet" type="button">Download finished</button>
 								<button class="button button-secondary" id="duplicateSheet" type="button">Duplicate as new</button>
 								<button class="button button-danger" id="deleteSheet" type="button">Delete</button>
 							</div>
@@ -323,7 +328,9 @@ export function renderHtml(options: RenderOptions = {}) {
 			el('copyMasterToPublishing').addEventListener('click', copyMasterToPublishing);
 			el('saveSheet').addEventListener('click', () => saveSheet(false));
 			el('saveDownloadSheet').addEventListener('click', () => saveSheet(false, true));
-			el('downloadSheet').addEventListener('click', () => { syncDraftFromForm(); downloadSheetFile(state.draft); });
+			el('downloadForSigning').addEventListener('click', () => { syncDraftFromForm(); downloadSheetFile(state.draft, 'signing'); });
+			el('emailForSigning').addEventListener('click', sendForSigning);
+			el('downloadSheet').addEventListener('click', () => { syncDraftFromForm(); if (!allSigned(state.draft)) { toast('Final download unlocks after every collaborator signs. Use Download to sign first.'); return; } downloadSheetFile(state.draft, 'final'); });
 			el('duplicateSheet').addEventListener('click', () => saveSheet(true));
 			el('deleteSheet').addEventListener('click', deleteActiveSheet);
 			el('navUpgrade').addEventListener('click', () => openUpgrade());
@@ -393,11 +400,18 @@ export function renderHtml(options: RenderOptions = {}) {
 			state.draft.collaborators.forEach((person, index) => {
 				const row = document.createElement('div');
 				row.className = 'collab-row';
-				row.innerHTML = savedPersonMarkup(index) + inputMarkup(index, 'name', 'Stage / credit name', person.name, 'Aria Rivers') + inputMarkup(index, 'legalName', 'Legal name', person.legalName, 'Aria Johnson') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + selectMarkup(index, 'role', 'Role / perspective', person.role, roleOptions, 'Choose role') + selectMarkup(index, 'contribution', 'Contribution', person.contribution, contributionOptions, 'Choose contribution') + selectMarkup(index, 'pro', 'PRO', person.pro, proOptions, 'Choose PRO') + inputMarkup(index, 'ipi', 'IPI / CAE # required', person.ipi, '00000000000') + inputMarkup(index, 'publisher', 'Publisher / admin', person.publisher, 'Self-published') + inputMarkup(index, 'publisherIpi', 'Publisher IPI', person.publisherIpi, 'Optional') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
+				row.innerHTML = savedPersonMarkup(index) + inputMarkup(index, 'name', 'Stage / credit name', person.name, 'Aria Rivers') + inputMarkup(index, 'legalName', 'Legal name', person.legalName, 'Aria Johnson') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + selectMarkup(index, 'role', 'Role / perspective', person.role, roleOptions, 'Choose role') + selectMarkup(index, 'contribution', 'Contribution', person.contribution, contributionOptions, 'Choose contribution') + selectMarkup(index, 'pro', 'PRO', person.pro, proOptions, 'Choose PRO') + inputMarkup(index, 'ipi', 'IPI / CAE # required', person.ipi, '00000000000') + inputMarkup(index, 'publisher', 'Publisher / admin', person.publisher, 'Self-published') + inputMarkup(index, 'publisherIpi', 'Publisher IPI', person.publisherIpi, 'Optional') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + signatureMarkup(index, person) + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
 				row.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', (event) => updateCollaborator(index, event.target.dataset.key, event.target.value)));
 				row.querySelector('.remove').addEventListener('click', () => { state.draft.collaborators.splice(index, 1); if (!state.draft.collaborators.length) state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
+				row.querySelector('.sign-person').addEventListener('click', () => signCollaborator(index));
+				row.querySelector('.clear-signature').addEventListener('click', () => clearSignature(index));
 				container.appendChild(row);
 			});
+		}
+
+		function signatureMarkup(index, person) {
+			const signed = person.signed && person.signatureName;
+			return '<div class="signature-tools field full"><div class="field"><label>Typed signature</label><input data-index="' + index + '" data-key="signatureName" value="' + escapeHtml(person.signatureName || '') + '" placeholder="Type legal signature" /></div><button class="button button-primary sign-person" type="button">Sign now</button><button class="button button-secondary clear-signature" type="button">Clear</button><span class="signature-stamp">' + (signed ? 'Signed ' + escapeHtml(person.signedAt || '') : 'Not signed yet') + '</span></div>';
 		}
 
 		function inputMarkup(index, key, label, value, placeholder, type = 'text') {
@@ -414,6 +428,24 @@ export function renderHtml(options: RenderOptions = {}) {
 			const people = getSavedPeople();
 			const options = ['<option value="">Load previous person</option>'].concat(people.map((person, personIndex) => '<option value="' + personIndex + '">' + escapeHtml(person.name || person.legalName || person.email || 'Saved person') + (person.ipi ? ' • IPI ' + escapeHtml(person.ipi) : '') + '</option>')).join('');
 			return '<div class="field full"><label>Previous collaborators</label><select data-index="' + index + '" data-key="savedPerson">' + options + '</select></div>';
+		}
+
+		function signCollaborator(index) {
+			const person = state.draft.collaborators[index];
+			if (!person.signatureName || !person.signatureName.trim()) { toast('Type the legal signature first.'); return; }
+			person.signed = true;
+			person.signedAt = new Date().toLocaleString();
+			renderCollaborators();
+			calculateTotals();
+			toast('Signature captured. Save the sheet to keep it on the profile.');
+		}
+
+		function clearSignature(index) {
+			state.draft.collaborators[index].signed = false;
+			state.draft.collaborators[index].signatureName = '';
+			state.draft.collaborators[index].signedAt = '';
+			renderCollaborators();
+			calculateTotals();
 		}
 
 		function updateCollaborator(index, key, value) {
@@ -544,6 +576,19 @@ export function renderHtml(options: RenderOptions = {}) {
 			toast(downloadAfter ? 'Split sheet saved and downloaded.' : 'Split sheet saved.');
 		}
 
+		function allSigned(sheet) {
+			const credited = (sheet.collaborators || []).filter((person) => person.name || person.legalName || person.email);
+			return credited.length > 0 && credited.every((person) => person.signed && person.signatureName);
+		}
+
+		function sendForSigning() {
+			syncDraftFromForm();
+			const subject = encodeURIComponent('SplitSheet ready for signature: ' + (state.draft.title || 'Untitled Split Sheet'));
+			const body = encodeURIComponent('Please review and sign this split sheet for ' + (state.draft.title || 'this song') + '. Open the SplitSheet app, type your signature in your collaborator row, click Sign now, then save.');
+			window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+			toast('Email draft opened. After everyone signs in the app, save and download the finished split sheet.');
+		}
+
 		function validateSheet(sheet) {
 			if (!sheet.title || !sheet.title.trim()) return 'Add a song title before saving.';
 			const credited = (sheet.collaborators || []).filter((person) => person.name || person.legalName || person.email);
@@ -553,22 +598,24 @@ export function renderHtml(options: RenderOptions = {}) {
 			return '';
 		}
 
-		function downloadSheetFile(sheet) {
-			const html = buildDownloadHtml(sheet);
+		function downloadSheetFile(sheet, mode = 'final') {
+			if (mode === 'final' && !allSigned(sheet)) { toast('Final download unlocks after every collaborator signs.'); return; }
+			const html = buildDownloadHtml(sheet, mode);
 			const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
 			const link = document.createElement('a');
 			link.href = URL.createObjectURL(blob);
-			link.download = slugify(sheet.title || 'split-sheet') + '-split-sheet.html';
+			link.download = slugify('SplitSheet-' + (mode === 'final' ? 'signed-' : 'to-sign-') + (sheet.title || 'split-sheet')) + '.html';
 			document.body.appendChild(link);
 			link.click();
 			link.remove();
 			setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 		}
 
-		function buildDownloadHtml(sheet) {
+		function buildDownloadHtml(sheet, mode) {
 			const collaborators = sheet.collaborators || [];
-			const rows = collaborators.map((person) => '<tr><td>' + escapeHtml(person.name || '') + '</td><td>' + escapeHtml(person.legalName || '') + '</td><td>' + escapeHtml(person.role || '') + '</td><td>' + escapeHtml(person.contribution || '') + '</td><td>' + escapeHtml(person.pro || '') + '</td><td>' + escapeHtml(person.ipi || '') + '</td><td>' + escapeHtml(person.publisher || '') + '</td><td>' + escapeHtml(String(person.masterPercent || 0)) + '%</td><td>' + escapeHtml(String(person.publishingPercent || 0)) + '%</td><td></td></tr>').join('');
-			return '<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(sheet.title || 'Split Sheet') + '</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}h1{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #d0d5dd;padding:8px;text-align:left;font-size:12px}.meta{color:#667085}.sig{height:52px}</style></head><body><h1>' + escapeHtml(sheet.title || 'Untitled Split Sheet') + '</h1><p class="meta">Artist: ' + escapeHtml(sheet.artist || '') + ' • Creation date: ' + escapeHtml(sheet.creationDate || '') + ' • ISRC: ' + escapeHtml(sheet.isrc || 'Add later') + '</p><table><thead><tr><th>Credit name</th><th>Legal name</th><th>Role</th><th>Contribution</th><th>PRO</th><th>IPI / CAE</th><th>Publisher</th><th>Master</th><th>Publishing</th><th>Signature</th></tr></thead><tbody>' + rows + '</tbody></table><p class="meta">Generated by SplitSheet. Confirm legal terms with counsel before distribution.</p></body></html>';
+			const statusLabel = mode === 'final' ? 'SIGNED FINAL SPLIT SHEET' : 'READY TO SIGN';
+			const rows = collaborators.map((person) => '<tr><td>' + escapeHtml(person.name || '') + '</td><td>' + escapeHtml(person.legalName || '') + '</td><td>' + escapeHtml(person.role || '') + '</td><td>' + escapeHtml(person.contribution || '') + '</td><td>' + escapeHtml(person.pro || '') + '</td><td>' + escapeHtml(person.ipi || '') + '</td><td>' + escapeHtml(person.publisher || '') + '</td><td>' + escapeHtml(String(person.masterPercent || 0)) + '%</td><td>' + escapeHtml(String(person.publishingPercent || 0)) + '%</td><td>' + (person.signed ? '<strong>' + escapeHtml(person.signatureName || '') + '</strong><br><small>' + escapeHtml(person.signedAt || '') + '</small>' : '<span class="line"></span>') + '</td></tr>').join('');
+			return '<!doctype html><html><head><meta charset="utf-8"><title>SplitSheet - ' + escapeHtml(sheet.title || 'Split Sheet') + '</title><style>:root{--purple:#7c3aed;--pink:#ec4899;--ink:#101828;--line:#d0d5dd}body{font-family:Inter,Arial,sans-serif;margin:0;color:var(--ink);background:#f8fafc}.wrap{max-width:1120px;margin:28px auto;padding:28px;background:#fff;border:1px solid #e4e7ec;border-radius:28px}.brand{display:flex;justify-content:space-between;gap:20px;align-items:center;border-bottom:4px solid var(--purple);padding-bottom:18px}.logo{font-size:28px;font-weight:900;letter-spacing:-.04em}.mark{display:inline-grid;place-items:center;width:38px;height:38px;border-radius:14px;color:#fff;background:linear-gradient(135deg,var(--purple),var(--pink));margin-right:8px}.pill{padding:8px 12px;border-radius:999px;color:#fff;background:linear-gradient(135deg,var(--purple),var(--pink));font-weight:800}h1{margin:26px 0 6px;font-size:34px}.meta{color:#667085;font-weight:700}table{width:100%;border-collapse:collapse;margin-top:24px}th{background:#f4ebff;color:#4c1d95}th,td{border:1px solid var(--line);padding:10px;text-align:left;font-size:12px;vertical-align:top}.line{display:block;height:32px;border-bottom:2px solid #111827}.footer{margin-top:24px;color:#667085;font-size:12px}</style></head><body><div class="wrap"><div class="brand"><div class="logo"><span class="mark">S</span>SplitSheet</div><div class="pill">' + statusLabel + '</div></div><h1>' + escapeHtml(sheet.title || 'Untitled Split Sheet') + '</h1><p class="meta">Artist: ' + escapeHtml(sheet.artist || '') + ' • Creation date: ' + escapeHtml(sheet.creationDate || '') + ' • ISRC: ' + escapeHtml(sheet.isrc || 'Add later') + '</p><table><thead><tr><th>Credit name</th><th>Legal name</th><th>Role</th><th>Contribution</th><th>PRO</th><th>IPI / CAE</th><th>Publisher</th><th>Master</th><th>Publishing</th><th>Signature</th></tr></thead><tbody>' + rows + '</tbody></table><p class="footer">Generated by SplitSheet. Signed copies can be saved to the creator profile and downloaded after every collaborator signs. Confirm legal terms with counsel before distribution.</p></div></body></html>';
 		}
 
 		function slugify(value) { return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'split-sheet'; }
@@ -623,7 +670,7 @@ export function renderHtml(options: RenderOptions = {}) {
 		function blankSheet() {
 			return { title: '', artist: '', isrc: '', creationDate: new Date().toISOString().slice(0, 10), splitType: 'both', status: 'draft', collaborators: [blankCollaborator(), blankCollaborator()] };
 		}
-		function blankCollaborator() { return { name: '', legalName: '', email: '', role: '', contribution: '', pro: '', ipi: '', publisher: '', publisherIpi: '', masterPercent: 0, publishingPercent: 0, signed: false }; }
+		function blankCollaborator() { return { name: '', legalName: '', email: '', role: '', contribution: '', pro: '', ipi: '', publisher: '', publisherIpi: '', masterPercent: 0, publishingPercent: 0, signed: false, signatureName: '', signedAt: '' }; }
 		function round(value) { return Math.round(value * 100) / 100; }
 		function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char])); }
 		function toast(message) { el('toast').textContent = message; el('toast').style.display = 'block'; setTimeout(() => { el('toast').style.display = 'none'; }, 3200); }
