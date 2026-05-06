@@ -13,6 +13,7 @@ Houston Indie 30 is a full-stack music chart web app for ranking the top 30 non-
 - Weekly scheduled chart recalculation through Cloudflare Cron Triggers.
 - Prisma schema for a production PostgreSQL deployment path, plus D1 SQL migrations for local Worker development.
 - Seed data for 30 fictional Houston underground artists.
+- Defensive first-request D1 bootstrap so preview deployments render instead of throwing if remote migrations were not applied yet.
 
 ## Local development
 
@@ -40,7 +41,7 @@ npm run check
 
 ## Data model
 
-D1 migrations live in `migrations/0001_houston_indie_30.sql` and create:
+D1 migrations live in `migrations/0001_houston_indie_30.sql` and create the canonical local/remote database. The Worker also calls `ensureDatabase` on startup as a safety net for preview deployments where remote migrations were skipped, preventing Cloudflare Error 1101 from missing tables. The schema includes:
 
 - `users`
 - `artists`

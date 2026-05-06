@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { ensureDatabase } from "./bootstrap";
 import { artistBySlug, currentChart, recalculateChart, songBySlug } from "./db";
 import { aboutPage, adminPage, adminSection, artistPage, chartPage, hero, layout, newsPage, songPage, submitPage } from "./renderHtml";
 import { html, readBody, requestHashes, str } from "./security";
@@ -7,6 +8,7 @@ async function handle(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const hashes = await requestHashes(request, "houston-indie-30");
 	const ctx = { request, env, url, sessionId: hashes.sessionId, ipHash: hashes.ipHash, userAgentHash: hashes.userAgentHash };
+	await ensureDatabase(env.DB);
 	let response: Response;
 	if (url.pathname.startsWith("/api/")) response = await api(ctx);
 	else if (request.method === "POST" && url.pathname === "/submit") {
@@ -36,5 +38,5 @@ async function handle(request: Request, env: Env) {
 }
 export default {
 	fetch: handle,
-	async scheduled(_event, env) { await recalculateChart(env.DB); }
+	async scheduled(_event, env) { await ensureDatabase(env.DB); await recalculateChart(env.DB); }
 } satisfies ExportedHandler<Env>;
