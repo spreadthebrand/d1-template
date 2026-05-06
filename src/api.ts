@@ -1,6 +1,6 @@
 import { approveSubmission, artistBySlug, createSubmission, currentChart, recalculateChart, songBySlug } from "./db";
 import type { AppContext } from "./types";
-import { assertAdmin, bool, json, readBody, redirect, str, slugify } from "./security";
+import { assertAdmin, bool, firstNonEmpty, json, readBody, redirect, str, slugify, uploadedAsset } from "./security";
 
 function adminOnly(ctx: AppContext) { return assertAdmin(ctx.request) ? null : json({ error: "Admin token required" }, 401); }
 
@@ -22,7 +22,7 @@ export async function api(ctx: AppContext) {
 			artistName: str(body.artistName, 120), contactEmail: str(body.contactEmail, 180), songTitle: str(body.songTitle, 140), genre: str(body.genre, 80), neighborhood: str(body.neighborhood, 80), bio: str(body.bio, 1200),
 			socialLinks: JSON.stringify({ instagram: str(body.instagram, 240), tiktok: str(body.tiktok, 240), website: str(body.website, 240) }),
 			streamingLinks: JSON.stringify({ spotify: str(body.spotify, 240), appleMusic: str(body.appleMusic, 240), youtube: str(body.youtube, 240), soundcloud: str(body.soundcloud, 240), audiomack: str(body.audiomack, 240), bandcamp: str(body.bandcamp, 240) }),
-			audioFile: str(body.audioFile, 500), coverArt: str(body.coverArt, 500), permissionToStream: bool(body.permissionToStream), permissionToDownload: bool(body.permissionToDownload)
+			audioFile: firstNonEmpty(uploadedAsset(body.audioUpload, ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"], "audio"), str(body.audioFile, 500)), coverArt: firstNonEmpty(uploadedAsset(body.coverUpload, ["image/jpeg", "image/png", "image/webp"], "cover"), str(body.coverArt, 500)), permissionToStream: bool(body.permissionToStream), permissionToDownload: bool(body.permissionToDownload)
 		});
 		return json({ ok: true, id, message: "Submission received for editorial review." }, 201);
 	}

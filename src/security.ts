@@ -30,3 +30,13 @@ export async function readBody(request: Request) {
 }
 export function str(v: unknown, max = 500) { return String(v ?? "").trim().slice(0, max); }
 export function bool(v: unknown) { return v === true || v === "true" || v === "on" || v === "1"; }
+
+export function uploadedAsset(value: unknown, allowedTypes: string[], prefix: string) {
+	if (!value || typeof value !== "object" || !("name" in value) || !("type" in value) || !("size" in value)) return "";
+	const file = value as { name: string; type: string; size: number };
+	if (!file.name || file.size <= 0) return "";
+	if (!allowedTypes.includes(file.type)) throw new Error(`${prefix} must be one of: ${allowedTypes.join(", ")}`);
+	const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").slice(0, 120);
+	return `local-upload://${prefix}/${crypto.randomUUID()}-${safeName}`;
+}
+export function firstNonEmpty(...values: string[]) { return values.find((value) => value.trim().length > 0) || ""; }

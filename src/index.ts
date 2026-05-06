@@ -3,7 +3,7 @@ import { ensureDatabase } from "./bootstrap";
 import { artistBySlug, currentChart, recalculateChart, songBySlug } from "./db";
 import { fallbackArtistBySlug, fallbackChart, fallbackNews, fallbackSongBySlug } from "./fallback";
 import { aboutPage, adminPage, adminSection, artistPage, chartPage, hero, layout, newsPage, songPage, submitPage } from "./renderHtml";
-import { html, json, readBody, requestHashes, str } from "./security";
+import { firstNonEmpty, html, json, readBody, requestHashes, str, uploadedAsset } from "./security";
 
 async function route(request: Request, env: Env) {
 	const url = new URL(request.url);
@@ -15,7 +15,7 @@ async function route(request: Request, env: Env) {
 	else if (request.method === "POST" && url.pathname === "/submit") {
 		const body = await readBody(request);
 		const apiRequest = new Request(new URL("/api/submissions", url.origin), { method: "POST", headers: { "content-type": "application/json", cookie: request.headers.get("cookie") || "" }, body: JSON.stringify({
-			artistName: str(body.artistName), contactEmail: str(body.contactEmail), songTitle: str(body.songTitle), genre: str(body.genre), neighborhood: str(body.neighborhood), bio: str(body.bio, 1200), audioFile: str(body.audioFile, 500), coverArt: str(body.coverArt, 500), spotify: str(body.spotify, 240), appleMusic: str(body.appleMusic, 240), youtube: str(body.youtube, 240), soundcloud: str(body.soundcloud, 240), audiomack: str(body.audiomack, 240), bandcamp: str(body.bandcamp, 240), permissionToStream: body.permissionToStream === "on", permissionToDownload: body.permissionToDownload === "on"
+			artistName: str(body.artistName), contactEmail: str(body.contactEmail), songTitle: str(body.songTitle), genre: str(body.genre), neighborhood: str(body.neighborhood), bio: str(body.bio, 1200), audioFile: firstNonEmpty(uploadedAsset(body.audioUpload, ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"], "audio"), str(body.audioFile, 500)), coverArt: firstNonEmpty(uploadedAsset(body.coverUpload, ["image/jpeg", "image/png", "image/webp"], "cover"), str(body.coverArt, 500)), spotify: str(body.spotify, 240), appleMusic: str(body.appleMusic, 240), youtube: str(body.youtube, 240), soundcloud: str(body.soundcloud, 240), audiomack: str(body.audiomack, 240), bandcamp: str(body.bandcamp, 240), permissionToStream: body.permissionToStream === "on", permissionToDownload: body.permissionToDownload === "on"
 		}) });
 		const result = await api({ ...ctx, request: apiRequest, url: new URL(apiRequest.url) });
 		response = result.ok ? html(layout("Submitted", `<section class="page"><h1>Submission received</h1><p>Your song is pending admin/editorial review. Approved songs can appear on-site after rights and stream permissions are confirmed.</p><a class="btn" href="/chart">Back to chart</a></section>`), 201) : result;

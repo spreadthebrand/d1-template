@@ -4,7 +4,7 @@ Houston Indie 30 is a full-stack music chart web app for ranking the top 30 non-
 
 ## What is included
 
-- Responsive dark, Houston-inspired public website: home, chart, artist profiles, song pages, submissions, about, RSS news, and admin sections.
+- Responsive, sleeker Houston/Astros-inspired public website: home, chart, artist profiles, song pages, upload-enabled submissions, about, RSS news, and admin sections.
 - Cloudflare Worker REST API backed by D1 for chart, artist, song, submission, analytics, stream, download, RSS, and admin workflows.
 - HTML5 global sticky mini-player with play/pause, progress, loading/error handling, and valid-stream reporting.
 - Spam-resistant stream counting: a play only counts after 30 seconds or 50% of duration, whichever comes first, and is rate-limited by song, session, and hashed IP.
@@ -27,7 +27,7 @@ The development server runs with Wrangler. Open the URL printed by Wrangler and 
 
 - `/` for the homepage
 - `/chart` for the current Houston Indie 30
-- `/submit` for public artist submissions
+- `/submit` for public artist submissions with audio and cover-art upload controls
 - `/news`, `/news/houston`, `/news/industry`, `/news/new-releases` for RSS-powered pages
 - `/admin` for the admin dashboard shell
 
