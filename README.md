@@ -9,6 +9,7 @@
 - The app **does not auto-place trades**.
 - The app **does not connect to brokers**.
 - The app **does not request or store Pocket Option credentials**.
+- The app **does not currently pull live Pocket Option, broker candle, payout, balance, or live-trader-view data**. Current signals are based on manual inputs and optional screenshot capture prep only.
 - Telegram bot token and chat ID are optional and stored locally in the browser only.
 - Signal logic can return `LOCKED` whenever hard risk rules are hit.
 - Binary options, especially very short expiries, can lose money quickly; offshore or unregulated brokers can add custody, pricing, payout, and withdrawal risks.
@@ -16,7 +17,7 @@
 ## Core features
 
 - Premium black/gold mobile command-center UI with large thumb-friendly controls.
-- Home dashboard with status, daily P/L, target, max loss, trade count, streaks, selected model, latest signal, confidence, expiry, reason, checklist, and next action.
+- Home dashboard with status, daily P/L, target, max loss, trade count, streaks, selected model, latest signal, confidence, expiry, reason, checklist, next action, and a clear data-source status card.
 - Manual signal input for trend, candles, ZigZag, stochastic, EMA, Bollinger Band, support/resistance, trendline, momentum, and wick context.
 - Five switchable trading models:
   - **Model A:** 1SV ZigZag Stochastic Scalper.
@@ -27,7 +28,7 @@
 - Risk control engine with daily target, max loss, max trades, max loss streak, pause-after-win-streak, no martingale guidance, no doubling after losses, and trade-size guide.
 - Trade journal with daily/weekly win rate, best/worst model, best asset, average P/L, loss warnings, optional screenshot filename, notes, and CSV export.
 - Visual education cards for Flick, Slide, Reach, and Choppy market states.
-- Optional Telegram alerts for High confidence signals only.
+- Optional Telegram alerts for High confidence manual-input signals only, plus a settings test button.
 - PWA manifest and service worker for install/offline fallback.
 
 ## Tech stack
@@ -79,12 +80,14 @@ The Admin / Settings screen lets you adjust:
 - Preferred expiry
 - Enabled models
 - Telegram bot token and chat ID
+- Telegram test alert
+- Current live-data connector status
 - Daily reset
 - CSV export through the journal screen
 
 ## Signal discipline
 
-The signal engine deliberately combines model-specific setup logic with the risk-control engine. A model setup can be valid and still be overridden by `WAIT`, `NO TRADE`, or `LOCKED` if the market is extended, choppy, missing confirmation, or outside the configured daily risk plan.
+The current version is **manual-data mode**: it does not receive live Pocket Option or broker data. The signal engine deliberately combines model-specific setup logic with the risk-control engine. A model setup can be valid and still be overridden by `WAIT`, `NO TRADE`, or `LOCKED` if the market is extended, choppy, missing confirmation, or outside the configured daily risk plan.
 
 Every signal returns:
 
@@ -98,3 +101,7 @@ Every signal returns:
 ## Deployment notes
 
 This repository started from a Cloudflare D1 template, but the app itself uses browser LocalStorage for the trading journal and settings. The existing Worker configuration remains deployable to Cloudflare. No Supabase or broker integration is required.
+
+## Live data roadmap
+
+Right now, alerts are generated only after the user enters chart context manually. A future Pocket Option-compatible connector, screenshot vision parser, or approved market-data feed can provide inputs to the same signal engine, but it should still avoid storing broker credentials and must not auto-execute real-money trades.
