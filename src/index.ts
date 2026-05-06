@@ -10,10 +10,14 @@ type AppEnv = Env & {
 type Collaborator = {
 	id?: string;
 	name?: string;
+	legalName?: string;
 	email?: string;
 	role?: string;
+	contribution?: string;
 	pro?: string;
+	ipi?: string;
 	publisher?: string;
+	publisherIpi?: string;
 	masterPercent?: number;
 	publishingPercent?: number;
 	signed?: boolean;
@@ -24,7 +28,7 @@ type SheetPayload = {
 	title?: string;
 	artist?: string;
 	isrc?: string;
-	releaseDate?: string;
+	creationDate?: string;
 	splitType?: string;
 	status?: string;
 	collaborators?: Collaborator[];
@@ -138,19 +142,19 @@ async function saveSheet(env: AppEnv, userId: string, payload: SheetPayload) {
 	const title = sanitizeText(payload.title, "Untitled Split Sheet");
 	const artist = sanitizeText(payload.artist);
 	const isrc = sanitizeText(payload.isrc).toUpperCase();
-	const releaseDate = sanitizeText(payload.releaseDate);
+	const creationDate = sanitizeText(payload.creationDate);
 	const splitType = ["master", "publishing", "both"].includes(payload.splitType ?? "") ? payload.splitType! : "both";
 	const status = ["draft", "ready", "signed"].includes(payload.status ?? "") ? payload.status! : "draft";
 	const now = new Date().toISOString();
 
 	await env.DB.prepare(
-		`INSERT INTO sheets (id, user_id, title, artist, isrc, release_date, split_type, status, collaborators_json, master_total, publishing_total, created_at, updated_at)
+		`INSERT INTO sheets (id, user_id, title, artist, isrc, creation_date, split_type, status, collaborators_json, master_total, publishing_total, created_at, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
 		 title = excluded.title,
 		 artist = excluded.artist,
 		 isrc = excluded.isrc,
-		 release_date = excluded.release_date,
+		 creation_date = excluded.creation_date,
 		 split_type = excluded.split_type,
 		 status = excluded.status,
 		 collaborators_json = excluded.collaborators_json,
@@ -165,7 +169,7 @@ async function saveSheet(env: AppEnv, userId: string, payload: SheetPayload) {
 			title,
 			artist,
 			isrc,
-			releaseDate,
+			creationDate,
 			splitType,
 			status,
 			JSON.stringify(collaborators),
@@ -184,10 +188,14 @@ function normalizeCollaborators(collaborators: Collaborator[]): Required<Collabo
 	return source.slice(0, 40).map((person) => ({
 		id: person.id || crypto.randomUUID(),
 		name: sanitizeText(person.name),
+		legalName: sanitizeText(person.legalName),
 		email: sanitizeText(person.email).toLowerCase(),
 		role: sanitizeText(person.role),
+		contribution: sanitizeText(person.contribution),
 		pro: sanitizeText(person.pro),
+		ipi: sanitizeText(person.ipi),
 		publisher: sanitizeText(person.publisher),
+		publisherIpi: sanitizeText(person.publisherIpi),
 		masterPercent: clampPercent(person.masterPercent),
 		publishingPercent: clampPercent(person.publishingPercent),
 		signed: Boolean(person.signed),
@@ -339,7 +347,7 @@ function mapSheetRow(row: Record<string, unknown>) {
 		title: row.title,
 		artist: row.artist,
 		isrc: row.isrc,
-		releaseDate: row.release_date,
+		creationDate: row.creation_date || row.release_date,
 		splitType: row.split_type,
 		status: row.status,
 		collaborators: JSON.parse(String(row.collaborators_json || "[]")),

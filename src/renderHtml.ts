@@ -90,8 +90,10 @@ export function renderHtml(options: RenderOptions = {}) {
 		input, select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; color: var(--ink); background: #fff; font-weight: 700; outline: none; }
 		input:focus, select:focus { border-color: rgba(124,58,237,.5); box-shadow: 0 0 0 4px rgba(124,58,237,.11); }
 		.collab-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; margin: 24px 0 12px; }
+		.split-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: #fbfcff; }
+		.tool-note { flex: 1 1 260px; color: var(--muted); font-size: .86rem; font-weight: 750; line-height: 1.45; }
 		.collab-table { display: grid; gap: 12px; }
-		.collab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+		.collab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
 		.remove { width: 100%; min-width: 42px; height: 42px; border: 0; border-radius: 12px; color: #b42318; background: #fef3f2; font-weight: 950; }
 		.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 18px; }
 		.total-card { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
@@ -158,7 +160,7 @@ export function renderHtml(options: RenderOptions = {}) {
 				<div class="hero-intro">
 					<span class="eyebrow">♪ Editable splits, live totals, D1-backed saves</span>
 					<h1 id="hero-title">Build the actual <span class="gradient">split sheet.</span></h1>
-					<p class="hero-copy">Create song metadata, add collaborators, calculate master and publishing percentages, save the agreement, and stop free creation after 2 sheets until the user upgrades.</p>
+					<p class="hero-copy">Create song metadata, choose each person's role, capture PRO/IPI/publisher details, auto-equalize or customize master and publishing percentages, and save a clean agreement before release day.</p>
 					<div class="hero-actions">
 						<button class="button button-primary" id="heroNewSheet" type="button">Create a new sheet →</button>
 						<button class="button button-secondary" data-view-link="account" type="button">Manage subscription</button>
@@ -188,12 +190,19 @@ export function renderHtml(options: RenderOptions = {}) {
 								<div class="field double"><label for="title">Song title</label><input id="title" placeholder="Midnight Session" /></div>
 								<div class="field double"><label for="artist">Primary artist</label><input id="artist" placeholder="Aria Rivers" /></div>
 								<div class="field"><label for="isrc">ISRC</label><input id="isrc" placeholder="US-ABC-26-00001" /></div>
-								<div class="field"><label for="releaseDate">Release date</label><input id="releaseDate" type="date" /></div>
+								<div class="field"><label for="creationDate">Creation date</label><input id="creationDate" type="date" /></div>
 								<div class="field"><label for="splitType">Split type</label><select id="splitType"><option value="both">Master + publishing</option><option value="master">Master only</option><option value="publishing">Publishing only</option></select></div>
 								<div class="field"><label for="status">Status</label><select id="status"><option value="draft">Draft</option><option value="ready">Ready for signature</option><option value="signed">Fully signed</option></select></div>
 							</div>
 
 							<div class="collab-head"><h2>Collaborators</h2><button class="button button-secondary" id="addCollaborator" type="button">+ Add collaborator</button></div>
+							<div class="split-tools" aria-label="Split calculation tools">
+								<button class="button button-secondary" id="equalBoth" type="button">Equalize both</button>
+								<button class="button button-secondary" id="equalMaster" type="button">Equal master</button>
+								<button class="button button-secondary" id="equalPublishing" type="button">Equal publishing</button>
+								<button class="button button-secondary" id="copyMasterToPublishing" type="button">Copy master → publishing</button>
+								<span class="tool-note">Use equal splits when everyone agrees to the same share, or edit any percentage manually for custom deals. Totals stay live.</span>
+							</div>
 							<div class="collab-table" id="collaborators"></div>
 
 							<div class="totals">
@@ -274,7 +283,8 @@ export function renderHtml(options: RenderOptions = {}) {
 		};
 
 		const el = (id) => document.getElementById(id);
-		const fields = ['title', 'artist', 'isrc', 'releaseDate', 'splitType', 'status'];
+		const fields = ['title', 'artist', 'isrc', 'creationDate', 'splitType', 'status'];
+		const roleOptions = ['Primary Artist / Performer', 'Featured Artist', 'Songwriter - Lyrics', 'Songwriter - Melody', 'Composer', 'Topliner', 'Producer', 'Co-Producer', 'Beatmaker', 'Instrumentalist', 'Arranger', 'Recording Engineer', 'Mix Engineer', 'Mastering Engineer', 'Publisher', 'Label / Master Owner', 'Sample Owner', 'Manager / Admin'];
 
 		document.addEventListener('DOMContentLoaded', () => {
 			bindEvents();
@@ -291,6 +301,10 @@ export function renderHtml(options: RenderOptions = {}) {
 			el('newSheet').addEventListener('click', newSheet);
 			el('heroNewSheet').addEventListener('click', newSheet);
 			el('addCollaborator').addEventListener('click', () => { state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
+			el('equalBoth').addEventListener('click', () => equalizeSplits('both'));
+			el('equalMaster').addEventListener('click', () => equalizeSplits('master'));
+			el('equalPublishing').addEventListener('click', () => equalizeSplits('publishing'));
+			el('copyMasterToPublishing').addEventListener('click', copyMasterToPublishing);
 			el('saveSheet').addEventListener('click', () => saveSheet(false));
 			el('duplicateSheet').addEventListener('click', () => saveSheet(true));
 			el('deleteSheet').addEventListener('click', deleteActiveSheet);
@@ -361,20 +375,53 @@ export function renderHtml(options: RenderOptions = {}) {
 			state.draft.collaborators.forEach((person, index) => {
 				const row = document.createElement('div');
 				row.className = 'collab-row';
-				row.innerHTML = inputMarkup(index, 'name', 'Name', person.name, 'Aria Rivers') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + inputMarkup(index, 'role', 'Role', person.role, 'Writer') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
-				row.querySelectorAll('input').forEach((input) => input.addEventListener('input', (event) => updateCollaborator(index, event.target.dataset.key, event.target.value)));
+				row.innerHTML = inputMarkup(index, 'name', 'Stage / credit name', person.name, 'Aria Rivers') + inputMarkup(index, 'legalName', 'Legal name', person.legalName, 'Aria Johnson') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + selectMarkup(index, 'role', 'Role / perspective', person.role) + inputMarkup(index, 'contribution', 'Specific contribution', person.contribution, 'Hook, verse, beat, guitar') + inputMarkup(index, 'pro', 'PRO', person.pro, 'ASCAP / BMI') + inputMarkup(index, 'ipi', 'IPI / CAE #', person.ipi, '00000000000') + inputMarkup(index, 'publisher', 'Publisher / admin', person.publisher, 'Self-published') + inputMarkup(index, 'publisherIpi', 'Publisher IPI', person.publisherIpi, 'Optional') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
+				row.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', (event) => updateCollaborator(index, event.target.dataset.key, event.target.value)));
 				row.querySelector('.remove').addEventListener('click', () => { state.draft.collaborators.splice(index, 1); if (!state.draft.collaborators.length) state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
 				container.appendChild(row);
 			});
 		}
 
 		function inputMarkup(index, key, label, value, placeholder, type = 'text') {
-			return '<div class="field"><label>' + label + '</label><input data-index="' + index + '" data-key="' + key + '" type="' + type + '" min="0" max="100" step="0.01" value="' + escapeHtml(value == null ? '' : String(value)) + '" placeholder="' + placeholder + '" /></div>';
+			const numeric = type === 'number' ? ' min="0" max="100" step="0.01"' : '';
+			return '<div class="field"><label>' + label + '</label><input data-index="' + index + '" data-key="' + key + '" type="' + type + '"' + numeric + ' value="' + escapeHtml(value == null ? '' : String(value)) + '" placeholder="' + placeholder + '" /></div>';
+		}
+
+		function selectMarkup(index, key, label, value) {
+			const options = ['<option value="">Choose role</option>'].concat(roleOptions.map((role) => '<option value="' + escapeHtml(role) + '"' + (role === value ? ' selected' : '') + '>' + escapeHtml(role) + '</option>')).join('');
+			return '<div class="field"><label>' + label + '</label><select data-index="' + index + '" data-key="' + key + '">' + options + '</select></div>';
 		}
 
 		function updateCollaborator(index, key, value) {
 			state.draft.collaborators[index][key] = key.includes('Percent') ? Number(value || 0) : value;
 			calculateTotals();
+		}
+
+		function equalizeSplits(target) {
+			const collaborators = state.draft.collaborators || [];
+			if (!collaborators.length) return;
+			const shares = getEqualShares(collaborators.length);
+			collaborators.forEach((person, index) => {
+				if (target === 'both' || target === 'master') person.masterPercent = shares[index];
+				if (target === 'both' || target === 'publishing') person.publishingPercent = shares[index];
+			});
+			renderCollaborators();
+			calculateTotals();
+			toast('Equal splits applied. You can still customize any person manually.');
+		}
+
+		function copyMasterToPublishing() {
+			(state.draft.collaborators || []).forEach((person) => { person.publishingPercent = Number(person.masterPercent || 0); });
+			renderCollaborators();
+			calculateTotals();
+			toast('Publishing splits copied from master splits.');
+		}
+
+		function getEqualShares(count) {
+			const base = Math.floor((100 / count) * 100) / 100;
+			const shares = Array(count).fill(base);
+			shares[count - 1] = round(100 - base * (count - 1));
+			return shares;
 		}
 
 		function syncDraftFromForm() {
@@ -476,9 +523,9 @@ export function renderHtml(options: RenderOptions = {}) {
 		}
 
 		function blankSheet() {
-			return { title: '', artist: '', isrc: '', releaseDate: '', splitType: 'both', status: 'draft', collaborators: [blankCollaborator(), blankCollaborator()] };
+			return { title: '', artist: '', isrc: '', creationDate: new Date().toISOString().slice(0, 10), splitType: 'both', status: 'draft', collaborators: [blankCollaborator(), blankCollaborator()] };
 		}
-		function blankCollaborator() { return { name: '', email: '', role: '', pro: '', publisher: '', masterPercent: 0, publishingPercent: 0, signed: false }; }
+		function blankCollaborator() { return { name: '', legalName: '', email: '', role: '', contribution: '', pro: '', ipi: '', publisher: '', publisherIpi: '', masterPercent: 0, publishingPercent: 0, signed: false }; }
 		function round(value) { return Math.round(value * 100) / 100; }
 		function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char])); }
 		function toast(message) { el('toast').textContent = message; el('toast').style.display = 'block'; setTimeout(() => { el('toast').style.display = 'none'; }, 3200); }
