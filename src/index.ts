@@ -1,13 +1,10 @@
 import { renderHtml } from "./renderHtml";
 
 export default {
-	async fetch(request, env) {
-		const stmt = env.DB.prepare("SELECT * FROM comments LIMIT 3");
-		const { results } = await stmt.all();
-
-		return new Response(renderHtml(JSON.stringify(results, null, 2)), {
+	async fetch() {
+		return new Response(renderHtml(), {
 			headers: {
-				"content-type": "text/html",
+				"content-type": "text/html; charset=UTF-8",
 			},
 		});
 	},
