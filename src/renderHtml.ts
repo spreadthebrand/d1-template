@@ -1,14 +1,16 @@
-export function renderHtml() {
+type RenderOptions = {
+	showAccount?: boolean;
+};
+
+export function renderHtml(options: RenderOptions = {}) {
+	const initialView = options.showAccount ? "account" : "builder";
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>SplitSheet — Music Split Agreements</title>
-	<meta
-		name="description"
-		content="Create clean music split sheets, collect collaborator signatures, and keep ownership details organized."
-	/>
+	<title>SplitSheet — Build Music Split Agreements</title>
+	<meta name="description" content="Create editable music split sheets, calculate collaborator percentages, and upgrade to Pro when your free sheets are used." />
 	<style>
 		:root {
 			--ink: #101828;
@@ -21,410 +23,466 @@ export function renderHtml() {
 			--pink: #ec4899;
 			--cyan: #06b6d4;
 			--green: #12b76a;
+			--red: #f04438;
 			--amber: #f59e0b;
 			--shadow: 0 24px 80px rgba(16, 24, 40, 0.14);
 		}
 
 		* { box-sizing: border-box; }
-
 		body {
 			margin: 0;
 			font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 			color: var(--ink);
 			background:
-				radial-gradient(circle at top left, rgba(124, 58, 237, 0.2), transparent 30rem),
-				radial-gradient(circle at 85% 8%, rgba(236, 72, 153, 0.16), transparent 24rem),
-				linear-gradient(180deg, #ffffff 0%, var(--bg) 45%, #eef2ff 100%);
+				radial-gradient(circle at 8% 2%, rgba(124, 58, 237, 0.18), transparent 29rem),
+				radial-gradient(circle at 86% 0%, rgba(236, 72, 153, 0.16), transparent 24rem),
+				linear-gradient(180deg, #fff 0%, var(--bg) 45%, #eef2ff 100%);
 			min-height: 100vh;
 		}
-
 		a { color: inherit; text-decoration: none; }
-
-		.page-shell {
-			width: min(1180px, calc(100% - 40px));
-			margin: 0 auto;
-		}
-
-		.nav {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			padding: 24px 0;
-		}
-
-		.logo {
-			display: inline-flex;
-			align-items: center;
-			gap: 10px;
-			font-weight: 900;
-			font-size: 1.35rem;
-			letter-spacing: -0.04em;
-		}
-
-		.logo-mark {
-			width: 40px;
-			height: 40px;
-			display: grid;
-			place-items: center;
-			border-radius: 14px;
-			color: #fff;
-			background: linear-gradient(135deg, var(--purple), var(--pink));
-			box-shadow: 0 14px 28px rgba(124, 58, 237, 0.28);
-		}
-
-		.nav-links {
-			display: flex;
-			align-items: center;
-			gap: 28px;
-			font-size: 0.95rem;
-			font-weight: 700;
-			color: #475467;
-		}
-
-		.button {
-			display: inline-flex;
-			align-items: center;
-			justify-content: center;
-			gap: 8px;
-			border: 0;
-			border-radius: 999px;
-			padding: 13px 22px;
-			font-weight: 800;
-			font-size: 0.95rem;
-			cursor: pointer;
-			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-		}
-
-		.button:hover { transform: translateY(-2px); }
-
-		.button-primary {
-			color: #fff;
-			background: linear-gradient(135deg, var(--purple), var(--pink));
-			box-shadow: 0 18px 34px rgba(124, 58, 237, 0.26);
-		}
-
-		.button-secondary {
-			color: var(--ink);
-			background: #fff;
-			border: 1px solid var(--line);
-			box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
-		}
-
-		.hero {
-			display: grid;
-			grid-template-columns: 0.95fr 1.05fr;
-			gap: 56px;
-			align-items: center;
-			padding: 54px 0 88px;
-		}
-
-		.eyebrow {
-			display: inline-flex;
-			align-items: center;
-			gap: 8px;
-			padding: 8px 13px;
-			border: 1px solid rgba(124, 58, 237, 0.18);
-			border-radius: 999px;
-			background: rgba(255, 255, 255, 0.76);
-			color: var(--purple-dark);
-			font-weight: 800;
-			font-size: 0.82rem;
-		}
-
-		h1 {
-			margin: 22px 0 20px;
-			font-size: clamp(3rem, 7vw, 6.5rem);
-			line-height: 0.9;
-			letter-spacing: -0.075em;
-		}
-
-		.gradient-text {
-			background: linear-gradient(135deg, var(--purple), var(--pink) 54%, var(--cyan));
-			-webkit-background-clip: text;
-			background-clip: text;
-			color: transparent;
-		}
-
-		.hero-copy {
-			margin: 0;
-			max-width: 620px;
-			font-size: 1.18rem;
-			line-height: 1.75;
-			color: var(--muted);
-		}
-
-		.hero-actions {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 14px;
-			margin: 32px 0 28px;
-		}
-
-		.trust-row {
-			display: grid;
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-			gap: 14px;
-			max-width: 520px;
-		}
-
-		.trust-card {
-			padding: 16px;
-			border: 1px solid rgba(228, 231, 236, 0.86);
-			border-radius: 20px;
-			background: rgba(255,255,255,0.75);
-			backdrop-filter: blur(10px);
-		}
-
-		.trust-card strong { display: block; font-size: 1.35rem; letter-spacing: -0.04em; }
-		.trust-card span { color: var(--muted); font-size: 0.82rem; font-weight: 700; }
-
-		.app-preview {
-			position: relative;
-			padding: 16px;
-			border-radius: 36px;
-			background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(236,72,153,0.2));
-			box-shadow: var(--shadow);
-		}
-
-		.window {
-			overflow: hidden;
-			border: 1px solid rgba(255, 255, 255, 0.8);
-			border-radius: 28px;
-			background: var(--paper);
-		}
-
-		.window-bar {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			padding: 17px 20px;
-			border-bottom: 1px solid var(--line);
-			background: rgba(248, 250, 252, 0.9);
-		}
-
-		.dots { display: flex; gap: 7px; }
-		.dot { width: 11px; height: 11px; border-radius: 50%; background: #f04438; }
-		.dot:nth-child(2) { background: #fdb022; }
-		.dot:nth-child(3) { background: #12b76a; }
-		.status-pill { border-radius: 999px; padding: 7px 12px; background: #ecfdf3; color: #027a48; font-size: 0.78rem; font-weight: 900; }
-
-		.sheet-card { padding: 24px; }
-		.sheet-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 22px; }
-		.sheet-title strong { display: block; font-size: 1.35rem; letter-spacing: -0.04em; }
-		.sheet-title span { color: var(--muted); font-weight: 700; font-size: 0.9rem; }
-		.percent-badge { display: grid; place-items: center; width: 82px; height: 82px; border-radius: 26px; color: #fff; background: linear-gradient(135deg, var(--purple), var(--cyan)); font-weight: 950; font-size: 1.45rem; }
-
-		.collaborator-list { display: grid; gap: 12px; }
-		.collaborator { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
-		.avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 15px; color: #fff; font-weight: 900; background: linear-gradient(135deg, #111827, #475467); }
-		.person strong { display: block; }
-		.person span { color: var(--muted); font-size: 0.84rem; font-weight: 700; }
-		.split { min-width: 62px; text-align: right; font-weight: 950; font-size: 1.15rem; }
-		.progress { margin-top: 22px; height: 12px; border-radius: 999px; background: #f2f4f7; overflow: hidden; }
-		.progress span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--purple), var(--pink), var(--cyan)); }
-
-		.float-card {
-			position: absolute;
-			right: -18px;
-			bottom: 42px;
-			width: 210px;
-			padding: 18px;
-			border: 1px solid rgba(255,255,255,0.72);
-			border-radius: 24px;
-			background: rgba(255,255,255,0.92);
-			box-shadow: 0 20px 60px rgba(16,24,40,0.16);
-			backdrop-filter: blur(12px);
-		}
-		.float-card strong { display: block; margin-bottom: 6px; }
-		.float-card span { color: var(--muted); font-size: 0.86rem; line-height: 1.45; }
-
-		.section { padding: 74px 0; }
-		.section-heading { max-width: 740px; margin: 0 auto 36px; text-align: center; }
-		.section-heading h2 { margin: 0 0 14px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; letter-spacing: -0.06em; }
-		.section-heading p { margin: 0; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
-
-		.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-		.feature-card { padding: 28px; border: 1px solid rgba(228,231,236,0.86); border-radius: 28px; background: rgba(255,255,255,0.82); box-shadow: 0 18px 45px rgba(16,24,40,0.06); }
-		.icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 22px; border-radius: 18px; background: #f4ebff; font-size: 1.35rem; }
-		.feature-card h3 { margin: 0 0 10px; font-size: 1.2rem; letter-spacing: -0.03em; }
-		.feature-card p { margin: 0; color: var(--muted); line-height: 1.65; }
-
-		.builder {
-			display: grid;
-			grid-template-columns: 0.8fr 1.2fr;
-			gap: 26px;
-			align-items: stretch;
-			padding: 20px;
-			border: 1px solid rgba(228,231,236,0.95);
-			border-radius: 34px;
-			background: rgba(255,255,255,0.78);
-			box-shadow: var(--shadow);
-		}
-
-		.panel { padding: 26px; border-radius: 26px; background: #fff; }
-		.panel.dark { color: #fff; background: linear-gradient(145deg, #1f1147, #5b21b6 55%, #be185d); }
-		.panel h3 { margin: 0 0 12px; font-size: 1.6rem; letter-spacing: -0.04em; }
-		.panel p { margin: 0 0 24px; color: rgba(255,255,255,0.78); line-height: 1.7; }
-		.check-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-		.check-list li { display: flex; align-items: center; gap: 10px; font-weight: 800; }
-		.check { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.18); }
-
-		.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+		button, input, select { font: inherit; }
+		button { cursor: pointer; }
+		.shell { width: min(1220px, calc(100% - 36px)); margin: 0 auto; }
+		.nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 0; }
+		.logo { display: inline-flex; align-items: center; gap: 10px; font-size: 1.34rem; font-weight: 950; letter-spacing: -0.04em; }
+		.logo-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 15px; color: #fff; background: linear-gradient(135deg, var(--purple), var(--pink)); box-shadow: 0 14px 28px rgba(124,58,237,0.28); }
+		.nav-links { display: flex; align-items: center; gap: 12px; color: #475467; font-weight: 800; }
+		.nav-link { border: 0; border-radius: 999px; padding: 10px 14px; color: inherit; background: transparent; font-weight: 850; }
+		.nav-link.active, .nav-link:hover { color: var(--purple-dark); background: #f4ebff; }
+		.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 999px; padding: 12px 18px; font-weight: 900; transition: transform .2s ease, box-shadow .2s ease; }
+		.button:hover { transform: translateY(-1px); }
+		.button-primary { color: #fff; background: linear-gradient(135deg, var(--purple), var(--pink)); box-shadow: 0 16px 32px rgba(124,58,237,.25); }
+		.button-secondary { color: var(--ink); background: #fff; border: 1px solid var(--line); box-shadow: 0 10px 24px rgba(16,24,40,.06); }
+		.button-danger { color: #b42318; background: #fef3f2; border: 1px solid #fecdca; }
+		.hero { display: grid; grid-template-columns: .82fr 1.18fr; gap: 38px; align-items: center; padding: 48px 0 34px; }
+		.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid rgba(124,58,237,.18); border-radius: 999px; background: rgba(255,255,255,.76); color: var(--purple-dark); font-size: .82rem; font-weight: 900; }
+		h1 { margin: 20px 0 18px; font-size: clamp(2.7rem, 6.2vw, 5.7rem); line-height: .91; letter-spacing: -.075em; }
+		.gradient { background: linear-gradient(135deg, var(--purple), var(--pink) 58%, var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+		.hero-copy { margin: 0; color: var(--muted); font-size: 1.12rem; line-height: 1.72; }
+		.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+		.stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+		.stat { padding: 15px; border: 1px solid rgba(228,231,236,.86); border-radius: 20px; background: rgba(255,255,255,.76); }
+		.stat strong { display: block; font-size: 1.28rem; letter-spacing: -.04em; }
+		.stat span { color: var(--muted); font-size: .8rem; font-weight: 800; }
+		.card { border: 1px solid rgba(228,231,236,.92); border-radius: 30px; background: rgba(255,255,255,.88); box-shadow: var(--shadow); }
+		.app-card { overflow: hidden; }
+		.app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: rgba(249,250,251,.9); }
+		.badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 11px; color: #027a48; background: #ecfdf3; font-size: .78rem; font-weight: 950; }
+		.badge.warn { color: #b54708; background: #fffaeb; }
+		.badge.pro { color: #fff; background: linear-gradient(135deg, var(--purple), var(--pink)); }
+		.workspace { display: grid; grid-template-columns: 290px 1fr; min-height: 590px; }
+		.sidebar { padding: 18px; border-right: 1px solid var(--line); background: #fbfcff; }
+		.sidebar-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+		.sidebar-head h2, .panel h2 { margin: 0; font-size: 1.15rem; letter-spacing: -.035em; }
+		.sheet-list { display: grid; gap: 10px; }
+		.sheet-item { width: 100%; text-align: left; border: 1px solid var(--line); border-radius: 18px; padding: 13px; background: #fff; }
+		.sheet-item.active { border-color: rgba(124,58,237,.45); box-shadow: 0 0 0 4px rgba(124,58,237,.09); }
+		.sheet-item strong { display: block; margin-bottom: 4px; }
+		.sheet-item span { display: block; color: var(--muted); font-size: .78rem; font-weight: 800; }
+		.free-meter { margin-top: 16px; padding: 14px; border-radius: 18px; background: #f4ebff; color: #4c1d95; font-weight: 800; line-height: 1.5; }
+		.panel { padding: 22px; }
+		.editor-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
 		.field { display: grid; gap: 7px; }
 		.field.full { grid-column: 1 / -1; }
-		label { color: #344054; font-size: 0.82rem; font-weight: 900; }
-		input, select { width: 100%; border: 1px solid var(--line); border-radius: 16px; padding: 13px 14px; color: var(--ink); background: #fff; font: inherit; font-weight: 650; outline: none; }
-		input:focus, select:focus { border-color: rgba(124,58,237,0.5); box-shadow: 0 0 0 4px rgba(124,58,237,0.11); }
+		.field.double { grid-column: span 2; }
+		label { color: #344054; font-size: .8rem; font-weight: 950; }
+		input, select { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; color: var(--ink); background: #fff; font-weight: 700; outline: none; }
+		input:focus, select:focus { border-color: rgba(124,58,237,.5); box-shadow: 0 0 0 4px rgba(124,58,237,.11); }
+		.collab-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px 0 12px; }
+		.collab-table { display: grid; gap: 10px; }
+		.collab-row { display: grid; grid-template-columns: 1.1fr 1fr .78fr .8fr .8fr auto; gap: 10px; align-items: end; padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+		.remove { width: 38px; height: 38px; border: 0; border-radius: 12px; color: #b42318; background: #fef3f2; font-weight: 950; }
+		.totals { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 18px; }
+		.total-card { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+		.total-card strong { display: block; font-size: 1.45rem; letter-spacing: -.05em; }
+		.total-card span { color: var(--muted); font-weight: 800; font-size: .82rem; }
+		.total-card.good { border-color: #abefc6; background: #f6fef9; }
+		.total-card.bad { border-color: #fecdca; background: #fffbfa; }
+		.status-line { min-height: 22px; margin-top: 14px; color: var(--muted); font-weight: 800; }
+		.feature-section { padding: 72px 0; }
+		.section-heading { max-width: 760px; margin: 0 auto 28px; text-align: center; }
+		.section-heading h2 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1; letter-spacing: -.06em; }
+		.section-heading p { margin: 0; color: var(--muted); line-height: 1.65; }
+		.features { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
+		.feature { padding: 22px; border: 1px solid rgba(228,231,236,.86); border-radius: 24px; background: rgba(255,255,255,.82); box-shadow: 0 16px 38px rgba(16,24,40,.06); }
+		.feature b { display: block; margin: 14px 0 8px; font-size: 1.06rem; }
+		.feature p { margin: 0; color: var(--muted); line-height: 1.58; }
+		.account-view { display: none; padding: 34px 0 80px; }
+		.account-card { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 22px; }
+		.account-box { padding: 22px; border-radius: 24px; background: #fff; border: 1px solid var(--line); }
+		.account-box h2 { margin: 0 0 10px; }
+		.account-box p { margin: 0 0 18px; color: var(--muted); line-height: 1.65; }
+		.modal-backdrop { position: fixed; inset: 0; display: none; place-items: center; padding: 20px; background: rgba(15,23,42,.56); z-index: 30; }
+		.modal { width: min(540px, 100%); padding: 28px; border-radius: 30px; background: #fff; box-shadow: 0 24px 90px rgba(0,0,0,.24); }
+		.modal h2 { margin: 0 0 10px; font-size: 2rem; letter-spacing: -.05em; }
+		.modal p { margin: 0 0 18px; color: var(--muted); line-height: 1.65; }
+		.price { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
+		.price strong { font-size: 2.5rem; letter-spacing: -.06em; }
+		.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+		.toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: none; max-width: min(560px, calc(100% - 28px)); padding: 13px 16px; border-radius: 999px; color: #fff; background: #101828; font-weight: 850; box-shadow: 0 18px 44px rgba(16,24,40,.22); z-index: 40; }
+		.footer { display: flex; justify-content: space-between; gap: 18px; padding: 28px 0 42px; color: var(--muted); font-weight: 800; }
+		body[data-view="account"] .main-view { display: none; }
+		body[data-view="account"] .account-view { display: block; }
 
-		.split-table { margin-top: 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; }
-		.split-row { display: grid; grid-template-columns: 1.2fr 0.8fr 0.5fr; gap: 12px; padding: 13px 16px; align-items: center; border-bottom: 1px solid var(--line); }
-		.split-row:last-child { border-bottom: 0; }
-		.split-row.header { color: #667085; background: #f9fafb; font-size: 0.78rem; font-weight: 950; text-transform: uppercase; letter-spacing: 0.08em; }
-		.role { color: var(--muted); font-weight: 700; }
-		.value { font-weight: 950; }
-
-		.cta { margin: 70px 0 38px; padding: 50px; border-radius: 36px; color: #fff; text-align: center; background: linear-gradient(135deg, #111827, #5b21b6 58%, #db2777); box-shadow: var(--shadow); }
-		.cta h2 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.35rem); letter-spacing: -0.06em; }
-		.cta p { margin: 0 auto 28px; max-width: 640px; color: rgba(255,255,255,0.78); line-height: 1.7; }
-		.cta .button { background: #fff; color: #3b0764; }
-
-		.footer { display: flex; justify-content: space-between; gap: 20px; padding: 36px 0 46px; color: var(--muted); font-weight: 700; }
-
-		@media (max-width: 900px) {
-			.nav-links { display: none; }
-			.hero, .builder { grid-template-columns: 1fr; }
-			.features, .trust-row { grid-template-columns: 1fr; }
-			.float-card { position: static; width: auto; margin-top: 16px; }
+		@media (max-width: 980px) {
+			.hero, .workspace, .account-card { grid-template-columns: 1fr; }
+			.sidebar { border-right: 0; border-bottom: 1px solid var(--line); }
+			.features { grid-template-columns: repeat(2, minmax(0,1fr)); }
+			.collab-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
 		}
-
-		@media (max-width: 560px) {
-			.page-shell { width: min(100% - 28px, 1180px); }
-			.hero { padding-top: 28px; }
-			.form-grid, .split-row { grid-template-columns: 1fr; }
-			.cta { padding: 34px 22px; }
+		@media (max-width: 640px) {
+			.shell { width: min(100% - 24px, 1220px); }
+			.nav { align-items: flex-start; flex-direction: column; }
+			.nav-links { width: 100%; overflow-x: auto; }
+			.stat-row, .editor-grid, .totals, .features { grid-template-columns: 1fr; }
+			.field.double { grid-column: 1 / -1; }
+			.collab-row { grid-template-columns: 1fr; }
 			.footer { flex-direction: column; }
 		}
 	</style>
 </head>
-<body>
-	<div class="page-shell">
+<body data-view="${initialView}">
+	<div class="shell">
 		<nav class="nav" aria-label="Main navigation">
-			<a class="logo" href="#top" aria-label="SplitSheet home">
-				<span class="logo-mark">S</span>
-				<span>SplitSheet</span>
-			</a>
+			<a class="logo" href="/" data-view-link="builder" aria-label="SplitSheet home"><span class="logo-mark">S</span><span>SplitSheet</span></a>
 			<div class="nav-links">
-				<a href="#features">Features</a>
-				<a href="#builder">Builder</a>
-				<a href="#pricing">Pricing</a>
+				<button class="nav-link active" data-view-link="builder" type="button">Builder</button>
+				<a class="nav-link" href="#features">Features</a>
+				<button class="nav-link" data-view-link="account" type="button">Subscription</button>
+				<button class="button button-primary" id="navUpgrade" type="button">Upgrade to Pro</button>
 			</div>
-			<a class="button button-secondary" href="#builder">Create sheet</a>
 		</nav>
 
-		<main id="top">
+		<main class="main-view">
 			<section class="hero" aria-labelledby="hero-title">
 				<div>
-					<span class="eyebrow">♪ Built for creators, producers & labels</span>
-					<h1 id="hero-title">Split royalties <span class="gradient-text">without the chaos.</span></h1>
-					<p class="hero-copy">
-						Draft studio-ready split sheets, capture each collaborator's ownership percentage, and keep every signature in one polished place before the song leaves the room.
-					</p>
+					<span class="eyebrow">♪ Editable splits, live totals, D1-backed saves</span>
+					<h1 id="hero-title">Build the actual <span class="gradient">split sheet.</span></h1>
+					<p class="hero-copy">Create song metadata, add collaborators, calculate master and publishing percentages, save the agreement, and stop free creation after 2 sheets until the user upgrades.</p>
 					<div class="hero-actions">
-						<a class="button button-primary" href="#builder">Start a split sheet →</a>
-						<a class="button button-secondary" href="#features">See how it works</a>
+						<button class="button button-primary" id="heroNewSheet" type="button">Create a new sheet →</button>
+						<button class="button button-secondary" data-view-link="account" type="button">Manage subscription</button>
 					</div>
-					<div class="trust-row" aria-label="SplitSheet stats">
-						<div class="trust-card"><strong>100%</strong><span>ownership checks</span></div>
-						<div class="trust-card"><strong>3 min</strong><span>average setup</span></div>
-						<div class="trust-card"><strong>24/7</strong><span>cloud access</span></div>
+					<div class="stat-row" aria-label="Plan limits">
+						<div class="stat"><strong id="statUsed">0</strong><span>sheets created</span></div>
+						<div class="stat"><strong id="statRemaining">2</strong><span>free sheets left</span></div>
+						<div class="stat"><strong id="statPlan">Free</strong><span>current plan</span></div>
 					</div>
 				</div>
 
-				<div class="app-preview" aria-label="Split sheet application preview">
-					<div class="window">
-						<div class="window-bar">
-							<div class="dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-							<span class="status-pill">Ready for signature</span>
-						</div>
-						<div class="sheet-card">
-							<div class="sheet-header">
-								<div class="sheet-title">
-									<strong>Midnight Session</strong>
-									<span>Master split • ISRC pending</span>
-								</div>
-								<div class="percent-badge">100%</div>
-							</div>
-							<div class="collaborator-list">
-								<div class="collaborator"><span class="avatar">AR</span><span class="person"><strong>Aria Rivers</strong><span>Songwriter / Vocalist</span></span><span class="split">40%</span></div>
-								<div class="collaborator"><span class="avatar">MK</span><span class="person"><strong>Mika Keys</strong><span>Producer</span></span><span class="split">35%</span></div>
-								<div class="collaborator"><span class="avatar">JD</span><span class="person"><strong>Jules Day</strong><span>Composer</span></span><span class="split">25%</span></div>
-							</div>
-							<div class="progress" aria-hidden="true"><span></span></div>
-						</div>
+				<section class="card app-card" aria-label="Split sheet builder">
+					<div class="app-topbar">
+						<div><strong>SplitSheet Studio</strong><div class="status-line" id="saveStatus">Loading your workspace…</div></div>
+						<span class="badge" id="planBadge">Free plan</span>
 					</div>
-					<div class="float-card">
-						<strong>Auto-balanced splits</strong>
-						<span>Spot missing ownership before anyone signs.</span>
+					<div class="workspace">
+						<aside class="sidebar">
+							<div class="sidebar-head"><h2>Your sheets</h2><button class="button button-secondary" id="newSheet" type="button">New</button></div>
+							<div class="sheet-list" id="sheetList"></div>
+							<div class="free-meter" id="freeMeter">Create 2 sheets for free. Pro unlocks unlimited split sheets.</div>
+						</aside>
+
+						<section class="panel" aria-labelledby="editor-title">
+							<h2 id="editor-title">Agreement details</h2>
+							<div class="editor-grid">
+								<div class="field double"><label for="title">Song title</label><input id="title" placeholder="Midnight Session" /></div>
+								<div class="field double"><label for="artist">Primary artist</label><input id="artist" placeholder="Aria Rivers" /></div>
+								<div class="field"><label for="isrc">ISRC</label><input id="isrc" placeholder="US-ABC-26-00001" /></div>
+								<div class="field"><label for="releaseDate">Release date</label><input id="releaseDate" type="date" /></div>
+								<div class="field"><label for="splitType">Split type</label><select id="splitType"><option value="both">Master + publishing</option><option value="master">Master only</option><option value="publishing">Publishing only</option></select></div>
+								<div class="field"><label for="status">Status</label><select id="status"><option value="draft">Draft</option><option value="ready">Ready for signature</option><option value="signed">Fully signed</option></select></div>
+							</div>
+
+							<div class="collab-head"><h2>Collaborators</h2><button class="button button-secondary" id="addCollaborator" type="button">+ Add collaborator</button></div>
+							<div class="collab-table" id="collaborators"></div>
+
+							<div class="totals">
+								<div class="total-card" id="masterCard"><span>Master total</span><strong id="masterTotal">0%</strong></div>
+								<div class="total-card" id="publishingCard"><span>Publishing total</span><strong id="publishingTotal">0%</strong></div>
+								<div class="total-card" id="signatureCard"><span>Signed collaborators</span><strong id="signedTotal">0 / 0</strong></div>
+							</div>
+
+							<div class="hero-actions">
+								<button class="button button-primary" id="saveSheet" type="button">Save split sheet</button>
+								<button class="button button-secondary" id="duplicateSheet" type="button">Duplicate as new</button>
+								<button class="button button-danger" id="deleteSheet" type="button">Delete</button>
+							</div>
+						</section>
 					</div>
-				</div>
+				</section>
 			</section>
 
-			<section class="section" id="features" aria-labelledby="features-title">
+			<section class="feature-section" id="features" aria-labelledby="features-title">
 				<div class="section-heading">
-					<h2 id="features-title">Everything a clean split needs.</h2>
-					<p>Replace scattered notes, text threads, and mystery percentages with a focused workflow that makes collaborators confident.</p>
+					<h2 id="features-title">Finished product workflow included.</h2>
+					<p>The page now includes the editable split-sheet builder, backend persistence, live calculations, a free-plan limit, Stripe checkout hooks, an upgrade modal, and subscription management.</p>
 				</div>
 				<div class="features">
-					<article class="feature-card"><div class="icon">✍️</div><h3>Fast agreements</h3><p>Add the track, roles, publishers, PRO details, and master/publishing percentages from any device.</p></article>
-					<article class="feature-card"><div class="icon">🧮</div><h3>Percentage guardrails</h3><p>Built-in totals help ensure the sheet reaches exactly 100% before you circulate it for approval.</p></article>
-					<article class="feature-card"><div class="icon">🔐</div><h3>Signature trail</h3><p>Keep timestamps, signer names, and agreement status together so the final record is easy to find.</p></article>
+					<article class="feature"><span>✅</span><b>2 free sheets</b><p>New sheet creation is blocked after two saved sheets unless the visitor has an active Pro subscription.</p></article>
+					<article class="feature"><span>✅</span><b>Stripe subscriptions</b><p>Checkout, Customer Portal, and webhook endpoints are ready for real Stripe secrets and price IDs.</p></article>
+					<article class="feature"><span>✅</span><b>Upgrade modal</b><p>The modal appears when users click Upgrade or hit the free-sheet paywall.</p></article>
+					<article class="feature"><span>✅</span><b>Management page</b><p>The Subscription view links to Stripe's billing portal when a customer exists.</p></article>
 				</div>
-			</section>
-
-			<section class="section" id="builder" aria-labelledby="builder-title">
-				<div class="section-heading">
-					<h2 id="builder-title">Build a shareable split sheet.</h2>
-					<p>Use the demo builder to preview the kind of structured agreement SplitSheet creates for each song.</p>
-				</div>
-				<div class="builder">
-					<div class="panel dark">
-						<h3>From session idea to signed record.</h3>
-						<p>Capture contribution details while the session is still fresh, then export a beautiful, collaborator-ready summary.</p>
-						<ul class="check-list">
-							<li><span class="check">✓</span> Song metadata</li>
-							<li><span class="check">✓</span> Collaborator roles</li>
-							<li><span class="check">✓</span> Master and publishing splits</li>
-							<li><span class="check">✓</span> Signature status</li>
-						</ul>
-					</div>
-					<div class="panel">
-						<form class="form-grid">
-							<div class="field full"><label for="song">Song title</label><input id="song" value="Midnight Session" /></div>
-							<div class="field"><label for="artist">Primary artist</label><input id="artist" value="Aria Rivers" /></div>
-							<div class="field"><label for="status">Status</label><select id="status"><option>Ready for signature</option><option>Draft</option><option>Completed</option></select></div>
-						</form>
-						<div class="split-table" aria-label="Example split rows">
-							<div class="split-row header"><span>Collaborator</span><span>Role</span><span>Split</span></div>
-							<div class="split-row"><strong>Aria Rivers</strong><span class="role">Writer / Vocal</span><span class="value">40%</span></div>
-							<div class="split-row"><strong>Mika Keys</strong><span class="role">Producer</span><span class="value">35%</span></div>
-							<div class="split-row"><strong>Jules Day</strong><span class="role">Composer</span><span class="value">25%</span></div>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			<section class="cta" id="pricing" aria-labelledby="cta-title">
-				<h2 id="cta-title">Make the split official before release day.</h2>
-				<p>Launch a professional split workflow for every track, keep collaborators aligned, and avoid ownership surprises later.</p>
-				<a class="button" href="#builder">Create your first split sheet</a>
 			</section>
 		</main>
 
+		<section class="account-view" aria-labelledby="account-title">
+			<div class="section-heading">
+				<h1 id="account-title">Subscription management</h1>
+				<p>Review your current plan, open Stripe billing management, or upgrade to Pro for unlimited split sheets.</p>
+			</div>
+			<div class="card account-card">
+				<div class="account-box">
+					<h2>Current plan</h2>
+					<p id="accountPlanText">Loading subscription…</p>
+					<button class="button button-primary" id="accountUpgrade" type="button">Upgrade to Pro</button>
+				</div>
+				<div class="account-box">
+					<h2>Stripe billing portal</h2>
+					<p>Manage payment method, invoices, cancellation, and renewal details in Stripe's hosted portal.</p>
+					<button class="button button-secondary" id="manageBilling" type="button">Open subscription management</button>
+				</div>
+			</div>
+		</section>
+
 		<footer class="footer">
-			<span>© 2026 SplitSheet. All rights reserved.</span>
-			<span>Agreements • Signatures • Royalty clarity</span>
+			<span>© 2026 SplitSheet. Agreements, signatures, royalty clarity.</span>
+			<span>D1 + Workers + Stripe-ready subscriptions</span>
 		</footer>
 	</div>
+
+	<div class="modal-backdrop" id="upgradeModal" role="dialog" aria-modal="true" aria-labelledby="upgradeTitle">
+		<div class="modal">
+			<span class="badge pro">Upgrade required</span>
+			<h2 id="upgradeTitle">Upgrade to Pro</h2>
+			<p id="upgradeMessage">You get 2 free split sheets. Upgrade to Pro to create unlimited sheets and manage your subscription in Stripe.</p>
+			<div class="price"><strong>$9</strong><span>/ month</span></div>
+			<div class="field"><label for="billingEmail">Billing email</label><input id="billingEmail" type="email" placeholder="you@example.com" /></div>
+			<div class="modal-actions">
+				<button class="button button-secondary" id="closeUpgrade" type="button">Maybe later</button>
+				<button class="button button-primary" id="startCheckout" type="button">Continue to Stripe</button>
+			</div>
+		</div>
+	</div>
+	<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+	<script>
+		const state = {
+			bootstrap: null,
+			activeSheetId: null,
+			draft: blankSheet(),
+		};
+
+		const el = (id) => document.getElementById(id);
+		const fields = ['title', 'artist', 'isrc', 'releaseDate', 'splitType', 'status'];
+
+		document.addEventListener('DOMContentLoaded', () => {
+			bindEvents();
+			loadBootstrap();
+		});
+
+		function bindEvents() {
+			document.querySelectorAll('[data-view-link]').forEach((button) => {
+				button.addEventListener('click', (event) => {
+					event.preventDefault();
+					setView(button.dataset.viewLink);
+				});
+			});
+			el('newSheet').addEventListener('click', newSheet);
+			el('heroNewSheet').addEventListener('click', newSheet);
+			el('addCollaborator').addEventListener('click', () => { state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
+			el('saveSheet').addEventListener('click', () => saveSheet(false));
+			el('duplicateSheet').addEventListener('click', () => saveSheet(true));
+			el('deleteSheet').addEventListener('click', deleteActiveSheet);
+			el('navUpgrade').addEventListener('click', () => openUpgrade());
+			el('accountUpgrade').addEventListener('click', () => openUpgrade());
+			el('closeUpgrade').addEventListener('click', closeUpgrade);
+			el('startCheckout').addEventListener('click', startCheckout);
+			el('manageBilling').addEventListener('click', manageBilling);
+			fields.forEach((field) => el(field).addEventListener('input', syncDraftFromForm));
+		}
+
+		async function loadBootstrap() {
+			const response = await fetch('/api/bootstrap');
+			state.bootstrap = await response.json();
+			const firstSheet = state.bootstrap.sheets[0];
+			loadSheet(firstSheet || blankSheet());
+			renderShell();
+		}
+
+		function renderShell() {
+			const data = state.bootstrap;
+			const sheets = data.sheets || [];
+			el('statUsed').textContent = String(sheets.length);
+			el('statRemaining').textContent = data.isPro ? '∞' : String(data.freeRemaining);
+			el('statPlan').textContent = data.isPro ? 'Pro' : 'Free';
+			el('planBadge').textContent = data.isPro ? 'Pro plan' : 'Free plan';
+			el('planBadge').className = data.isPro ? 'badge pro' : 'badge';
+			el('freeMeter').textContent = data.isPro ? 'Pro is active. You can create unlimited split sheets.' : 'Free plan: ' + data.freeRemaining + ' of ' + data.freeLimit + ' free sheets remaining.';
+			el('accountPlanText').textContent = data.isPro ? 'You are on Pro. Subscription status: ' + data.subscription.status + '.' : 'You are on the Free plan. Create 2 sheets, then upgrade to continue.';
+			renderSheetList();
+			calculateTotals();
+		}
+
+		function renderSheetList() {
+			const sheets = state.bootstrap.sheets || [];
+			el('sheetList').innerHTML = '';
+			if (!sheets.length) {
+				const empty = document.createElement('div');
+				empty.className = 'sheet-item';
+				empty.innerHTML = '<strong>No sheets yet</strong><span>Create your first agreement.</span>';
+				el('sheetList').appendChild(empty);
+				return;
+			}
+			sheets.forEach((sheet) => {
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.className = 'sheet-item' + (sheet.id === state.activeSheetId ? ' active' : '');
+				button.innerHTML = '<strong>' + escapeHtml(sheet.title) + '</strong><span>' + escapeHtml(sheet.artist || 'No artist') + ' • Master ' + sheet.masterTotal + '% / Pub ' + sheet.publishingTotal + '%</span>';
+				button.addEventListener('click', () => loadSheet(sheet));
+				el('sheetList').appendChild(button);
+			});
+		}
+
+		function loadSheet(sheet) {
+			state.activeSheetId = sheet.id || null;
+			state.draft = JSON.parse(JSON.stringify(sheet));
+			if (!state.draft.collaborators || !state.draft.collaborators.length) state.draft.collaborators = [blankCollaborator(), blankCollaborator()];
+			fields.forEach((field) => { el(field).value = state.draft[field] || (field === 'splitType' ? 'both' : field === 'status' ? 'draft' : ''); });
+			renderCollaborators();
+			calculateTotals();
+			renderSheetList();
+			el('saveStatus').textContent = state.activeSheetId ? 'Editing saved sheet.' : 'New unsaved split sheet.';
+		}
+
+		function renderCollaborators() {
+			const container = el('collaborators');
+			container.innerHTML = '';
+			state.draft.collaborators.forEach((person, index) => {
+				const row = document.createElement('div');
+				row.className = 'collab-row';
+				row.innerHTML = inputMarkup(index, 'name', 'Name', person.name, 'Aria Rivers') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + inputMarkup(index, 'role', 'Role', person.role, 'Writer') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
+				row.querySelectorAll('input').forEach((input) => input.addEventListener('input', (event) => updateCollaborator(index, event.target.dataset.key, event.target.value)));
+				row.querySelector('.remove').addEventListener('click', () => { state.draft.collaborators.splice(index, 1); if (!state.draft.collaborators.length) state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
+				container.appendChild(row);
+			});
+		}
+
+		function inputMarkup(index, key, label, value, placeholder, type = 'text') {
+			return '<div class="field"><label>' + label + '</label><input data-index="' + index + '" data-key="' + key + '" type="' + type + '" min="0" max="100" step="0.01" value="' + escapeHtml(value == null ? '' : String(value)) + '" placeholder="' + placeholder + '" /></div>';
+		}
+
+		function updateCollaborator(index, key, value) {
+			state.draft.collaborators[index][key] = key.includes('Percent') ? Number(value || 0) : value;
+			calculateTotals();
+		}
+
+		function syncDraftFromForm() {
+			fields.forEach((field) => { state.draft[field] = el(field).value; });
+		}
+
+		function calculateTotals() {
+			syncDraftFromForm();
+			const collaborators = state.draft.collaborators || [];
+			const master = round(collaborators.reduce((sum, person) => sum + Number(person.masterPercent || 0), 0));
+			const publishing = round(collaborators.reduce((sum, person) => sum + Number(person.publishingPercent || 0), 0));
+			const signed = collaborators.filter((person) => person.signed).length;
+			el('masterTotal').textContent = master + '%';
+			el('publishingTotal').textContent = publishing + '%';
+			el('signedTotal').textContent = signed + ' / ' + collaborators.length;
+			setTotalClass('masterCard', master, state.draft.splitType !== 'publishing');
+			setTotalClass('publishingCard', publishing, state.draft.splitType !== 'master');
+			el('saveStatus').textContent = totalsMessage(master, publishing);
+		}
+
+		function setTotalClass(id, value, required) {
+			el(id).className = 'total-card ' + (!required ? '' : value === 100 ? 'good' : 'bad');
+		}
+
+		function totalsMessage(master, publishing) {
+			const type = state.draft.splitType;
+			const issues = [];
+			if (type !== 'publishing' && master !== 100) issues.push('master needs ' + round(100 - master) + '%');
+			if (type !== 'master' && publishing !== 100) issues.push('publishing needs ' + round(100 - publishing) + '%');
+			return issues.length ? 'Totals are editable. To finalize, ' + issues.join(' and ') + '.' : 'Totals are balanced at 100%. Ready to save.';
+		}
+
+		async function saveSheet(duplicate) {
+			syncDraftFromForm();
+			const payload = JSON.parse(JSON.stringify(state.draft));
+			if (duplicate) delete payload.id;
+			if (!payload.title) payload.title = 'Untitled Split Sheet';
+			const response = await fetch('/api/sheets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+			const data = await response.json();
+			if (response.status === 402 || data.paywall) {
+				state.bootstrap = data;
+				renderShell();
+				openUpgrade(data.message);
+				return;
+			}
+			state.bootstrap = data;
+			state.activeSheetId = data.activeSheetId;
+			const saved = data.sheets.find((sheet) => sheet.id === data.activeSheetId);
+			loadSheet(saved || payload);
+			renderShell();
+			toast('Split sheet saved.');
+		}
+
+		async function deleteActiveSheet() {
+			if (!state.activeSheetId) { newSheet(); return; }
+			if (!confirm('Delete this split sheet?')) return;
+			const response = await fetch('/api/sheets/' + encodeURIComponent(state.activeSheetId), { method: 'DELETE' });
+			state.bootstrap = await response.json();
+			loadSheet(state.bootstrap.sheets[0] || blankSheet());
+			renderShell();
+			toast('Split sheet deleted.');
+		}
+
+		function newSheet() {
+			if (state.bootstrap && !state.bootstrap.isPro && state.bootstrap.sheets.length >= state.bootstrap.freeLimit) {
+				openUpgrade('You have used your 2 free split sheets. Upgrade to Pro to create unlimited sheets.');
+				return;
+			}
+			loadSheet(blankSheet());
+		}
+
+		async function startCheckout() {
+			const response = await fetch('/api/billing/checkout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: el('billingEmail').value }) });
+			const data = await response.json();
+			if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+			else toast(data.message || 'Stripe checkout is not configured yet.');
+		}
+
+		async function manageBilling() {
+			const response = await fetch('/api/billing/portal', { method: 'POST' });
+			const data = await response.json();
+			if (data.portalUrl) window.location.href = data.portalUrl;
+			else if (data.needsCheckout) openUpgrade(data.message);
+			else toast(data.message || 'Stripe billing portal is not configured yet.');
+		}
+
+		function openUpgrade(message) {
+			if (message) el('upgradeMessage').textContent = message;
+			el('upgradeModal').style.display = 'grid';
+		}
+
+		function closeUpgrade() { el('upgradeModal').style.display = 'none'; }
+
+		function setView(view) {
+			document.body.dataset.view = view === 'account' ? 'account' : 'builder';
+			document.querySelectorAll('.nav-link').forEach((item) => item.classList.remove('active'));
+			document.querySelectorAll('[data-view-link="' + document.body.dataset.view + '"]').forEach((item) => item.classList.add('active'));
+			history.replaceState(null, '', document.body.dataset.view === 'account' ? '/account' : '/');
+		}
+
+		function blankSheet() {
+			return { title: '', artist: '', isrc: '', releaseDate: '', splitType: 'both', status: 'draft', collaborators: [blankCollaborator(), blankCollaborator()] };
+		}
+		function blankCollaborator() { return { name: '', email: '', role: '', pro: '', publisher: '', masterPercent: 0, publishingPercent: 0, signed: false }; }
+		function round(value) { return Math.round(value * 100) / 100; }
+		function escapeHtml(value) { return String(value).replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char])); }
+		function toast(message) { el('toast').textContent = message; el('toast').style.display = 'block'; setTimeout(() => { el('toast').style.display = 'none'; }, 3200); }
+	</script>
 </body>
 </html>`;
 }
