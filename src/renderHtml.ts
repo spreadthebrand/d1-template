@@ -8,7 +8,9 @@ export function renderHtml(options: RenderOptions = {}) {
 <html lang="en">
 <head>
 	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+	<meta name="theme-color" content="#7c3aed" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<title>SplitSheet — Build Music Split Agreements</title>
 	<meta name="description" content="Create editable music split sheets, calculate collaborator percentages, and upgrade to Pro when your free sheets are used." />
 	<style>
@@ -41,9 +43,10 @@ export function renderHtml(options: RenderOptions = {}) {
 		}
 		a { color: inherit; text-decoration: none; }
 		button, input, select { font: inherit; }
+		input, select, textarea { font-size: 16px; }
 		button { cursor: pointer; }
 		.shell { width: min(1440px, calc(100% - 36px)); margin: 0 auto; }
-		.nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 0; }
+		.nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 0; background: rgba(255,255,255,.82); backdrop-filter: blur(16px); }
 		.logo { display: inline-flex; align-items: center; gap: 10px; font-size: 1.34rem; font-weight: 950; letter-spacing: -0.04em; }
 		.logo-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 15px; color: #fff; background: linear-gradient(135deg, var(--purple), var(--pink)); box-shadow: 0 14px 28px rgba(124,58,237,0.28); }
 		.nav-links { display: flex; align-items: center; gap: 12px; color: #475467; font-weight: 800; }
@@ -54,7 +57,7 @@ export function renderHtml(options: RenderOptions = {}) {
 		.button-primary { color: #fff; background: linear-gradient(135deg, var(--purple), var(--pink)); box-shadow: 0 16px 32px rgba(124,58,237,.25); }
 		.button-secondary { color: var(--ink); background: #fff; border: 1px solid var(--line); box-shadow: 0 10px 24px rgba(16,24,40,.06); }
 		.button-danger { color: #b42318; background: #fef3f2; border: 1px solid #fecdca; }
-		.hero { display: grid; grid-template-columns: 1fr; gap: 28px; align-items: stretch; padding: 38px 0 34px; }
+		.hero { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: stretch; padding: 26px 0 34px; }
 		.hero-intro { max-width: 860px; }
 		.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px; border: 1px solid rgba(124,58,237,.18); border-radius: 999px; background: rgba(255,255,255,.76); color: var(--purple-dark); font-size: .82rem; font-weight: 900; }
 		h1 { margin: 20px 0 18px; font-size: clamp(2.7rem, 6.2vw, 5.7rem); line-height: .91; letter-spacing: -.075em; }
@@ -67,6 +70,7 @@ export function renderHtml(options: RenderOptions = {}) {
 		.stat span { color: var(--muted); font-size: .8rem; font-weight: 800; }
 		.card { border: 1px solid rgba(228,231,236,.92); border-radius: 30px; background: rgba(255,255,255,.88); box-shadow: var(--shadow); }
 		.app-card { overflow: hidden; }
+		.mobile-helper { display: none; color: var(--muted); font-size: .86rem; font-weight: 800; line-height: 1.5; }
 		.app-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: rgba(249,250,251,.9); }
 		.badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 7px 11px; color: #027a48; background: #ecfdf3; font-size: .78rem; font-weight: 950; }
 		.badge.warn { color: #b54708; background: #fffaeb; }
@@ -93,7 +97,7 @@ export function renderHtml(options: RenderOptions = {}) {
 		.split-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 14px; padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: #fbfcff; }
 		.tool-note { flex: 1 1 260px; color: var(--muted); font-size: .86rem; font-weight: 750; line-height: 1.45; }
 		.collab-table { display: grid; gap: 12px; }
-		.collab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
+		.collab-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
 		.remove { width: 100%; min-width: 42px; height: 42px; border: 0; border-radius: 12px; color: #b42318; background: #fef3f2; font-weight: 950; }
 		.totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 18px; }
 		.total-card { padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: #fff; }
@@ -122,6 +126,7 @@ export function renderHtml(options: RenderOptions = {}) {
 		.price { display: flex; align-items: baseline; gap: 8px; margin: 16px 0; }
 		.price strong { font-size: 2.5rem; letter-spacing: -.06em; }
 		.modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+		.helper-text { color: var(--muted); font-size: .78rem; font-weight: 750; line-height: 1.35; }
 		.toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: none; max-width: min(560px, calc(100% - 28px)); padding: 13px 16px; border-radius: 999px; color: #fff; background: #101828; font-weight: 850; box-shadow: 0 18px 44px rgba(16,24,40,.22); z-index: 40; }
 		.footer { display: flex; justify-content: space-between; gap: 18px; padding: 28px 0 42px; color: var(--muted); font-weight: 800; }
 		body[data-view="account"] .main-view { display: none; }
@@ -134,11 +139,16 @@ export function renderHtml(options: RenderOptions = {}) {
 		@media (max-width: 640px) {
 			.shell { width: min(100% - 24px, 1440px); }
 			.nav { align-items: flex-start; flex-direction: column; }
-			.nav-links { width: 100%; overflow-x: auto; }
+			h1 { font-size: clamp(2.35rem, 15vw, 4rem); }
+			.nav-links { width: 100%; overflow-x: auto; padding-bottom: 4px; }
+			.mobile-helper { display: block; }
+			.app-card { border-radius: 22px; margin-inline: -4px; }
 			.app-topbar { align-items: flex-start; flex-direction: column; }
 			.stat-row, .editor-grid, .totals, .features { grid-template-columns: 1fr; }
 			.field.double { grid-column: 1 / -1; }
-			.collab-row { grid-template-columns: 1fr; }
+			.collab-row { grid-template-columns: 1fr; padding: 12px; }
+			.hero-actions.action-bar { position: sticky; bottom: 0; z-index: 15; margin: 20px -22px -22px; padding: 12px; background: rgba(255,255,255,.94); border-top: 1px solid var(--line); backdrop-filter: blur(12px); }
+			.hero-actions.action-bar .button { flex: 1 1 100%; }
 			.footer { flex-direction: column; }
 		}
 	</style>
@@ -174,7 +184,7 @@ export function renderHtml(options: RenderOptions = {}) {
 
 				<section class="card app-card" aria-label="Split sheet builder">
 					<div class="app-topbar">
-						<div><strong>SplitSheet Studio</strong><div class="status-line" id="saveStatus">Loading your workspace…</div></div>
+						<div><strong>SplitSheet Studio</strong><div class="mobile-helper">Mobile-friendly builder: add people, equalize splits, save, then download a clean copy.</div><div class="status-line" id="saveStatus">Loading your workspace…</div></div>
 						<span class="badge" id="planBadge">Free plan</span>
 					</div>
 					<div class="workspace">
@@ -189,7 +199,7 @@ export function renderHtml(options: RenderOptions = {}) {
 							<div class="editor-grid">
 								<div class="field double"><label for="title">Song title</label><input id="title" placeholder="Midnight Session" /></div>
 								<div class="field double"><label for="artist">Primary artist</label><input id="artist" placeholder="Aria Rivers" /></div>
-								<div class="field"><label for="isrc">ISRC</label><input id="isrc" placeholder="US-ABC-26-00001" /></div>
+								<div class="field"><label for="isrc">ISRC <span class="helper-text">(optional, add later)</span></label><input id="isrc" placeholder="US-ABC-26-00001" /></div>
 								<div class="field"><label for="creationDate">Creation date</label><input id="creationDate" type="date" /></div>
 								<div class="field"><label for="splitType">Split type</label><select id="splitType"><option value="both">Master + publishing</option><option value="master">Master only</option><option value="publishing">Publishing only</option></select></div>
 								<div class="field"><label for="status">Status</label><select id="status"><option value="draft">Draft</option><option value="ready">Ready for signature</option><option value="signed">Fully signed</option></select></div>
@@ -201,6 +211,7 @@ export function renderHtml(options: RenderOptions = {}) {
 								<button class="button button-secondary" id="equalMaster" type="button">Equal master</button>
 								<button class="button button-secondary" id="equalPublishing" type="button">Equal publishing</button>
 								<button class="button button-secondary" id="copyMasterToPublishing" type="button">Copy master → publishing</button>
+								<button class="button button-secondary" id="addSavedPerson" type="button">Add saved person</button>
 								<span class="tool-note">Use equal splits when everyone agrees to the same share, or edit any percentage manually for custom deals. Totals stay live.</span>
 							</div>
 							<div class="collab-table" id="collaborators"></div>
@@ -211,8 +222,10 @@ export function renderHtml(options: RenderOptions = {}) {
 								<div class="total-card" id="signatureCard"><span>Signed collaborators</span><strong id="signedTotal">0 / 0</strong></div>
 							</div>
 
-							<div class="hero-actions">
+							<div class="hero-actions action-bar">
 								<button class="button button-primary" id="saveSheet" type="button">Save split sheet</button>
+								<button class="button button-secondary" id="saveDownloadSheet" type="button">Save + download</button>
+								<button class="button button-secondary" id="downloadSheet" type="button">Download draft</button>
 								<button class="button button-secondary" id="duplicateSheet" type="button">Duplicate as new</button>
 								<button class="button button-danger" id="deleteSheet" type="button">Delete</button>
 							</div>
@@ -285,6 +298,8 @@ export function renderHtml(options: RenderOptions = {}) {
 		const el = (id) => document.getElementById(id);
 		const fields = ['title', 'artist', 'isrc', 'creationDate', 'splitType', 'status'];
 		const roleOptions = ['Primary Artist / Performer', 'Featured Artist', 'Songwriter - Lyrics', 'Songwriter - Melody', 'Composer', 'Topliner', 'Producer', 'Co-Producer', 'Beatmaker', 'Instrumentalist', 'Arranger', 'Recording Engineer', 'Mix Engineer', 'Mastering Engineer', 'Publisher', 'Label / Master Owner', 'Sample Owner', 'Manager / Admin'];
+		const proOptions = ['ASCAP', 'BMI', 'SESAC', 'GMR', 'AllTrack', 'SOCAN', 'PRS', 'PPL', 'SACEM', 'GEMA', 'APRA AMCOS', 'KODA', 'SIAE', 'SAYCO', 'JASRAC', 'Other / Not sure'];
+		const contributionOptions = ['Vocals', 'Lyrics', 'Melody', 'Topline', 'Composition', 'Beat', 'Production', 'Co-production', 'Arrangement', 'Guitar', 'Bass', 'Drums', 'Keys / Piano', 'Strings', 'Horns', 'Sample', 'Recording', 'Mix', 'Master', 'Publishing admin', 'Master owner', 'Other'];
 
 		document.addEventListener('DOMContentLoaded', () => {
 			bindEvents();
@@ -301,11 +316,14 @@ export function renderHtml(options: RenderOptions = {}) {
 			el('newSheet').addEventListener('click', newSheet);
 			el('heroNewSheet').addEventListener('click', newSheet);
 			el('addCollaborator').addEventListener('click', () => { state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
+			el('addSavedPerson').addEventListener('click', addSavedPerson);
 			el('equalBoth').addEventListener('click', () => equalizeSplits('both'));
 			el('equalMaster').addEventListener('click', () => equalizeSplits('master'));
 			el('equalPublishing').addEventListener('click', () => equalizeSplits('publishing'));
 			el('copyMasterToPublishing').addEventListener('click', copyMasterToPublishing);
 			el('saveSheet').addEventListener('click', () => saveSheet(false));
+			el('saveDownloadSheet').addEventListener('click', () => saveSheet(false, true));
+			el('downloadSheet').addEventListener('click', () => { syncDraftFromForm(); downloadSheetFile(state.draft); });
 			el('duplicateSheet').addEventListener('click', () => saveSheet(true));
 			el('deleteSheet').addEventListener('click', deleteActiveSheet);
 			el('navUpgrade').addEventListener('click', () => openUpgrade());
@@ -375,7 +393,7 @@ export function renderHtml(options: RenderOptions = {}) {
 			state.draft.collaborators.forEach((person, index) => {
 				const row = document.createElement('div');
 				row.className = 'collab-row';
-				row.innerHTML = inputMarkup(index, 'name', 'Stage / credit name', person.name, 'Aria Rivers') + inputMarkup(index, 'legalName', 'Legal name', person.legalName, 'Aria Johnson') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + selectMarkup(index, 'role', 'Role / perspective', person.role) + inputMarkup(index, 'contribution', 'Specific contribution', person.contribution, 'Hook, verse, beat, guitar') + inputMarkup(index, 'pro', 'PRO', person.pro, 'ASCAP / BMI') + inputMarkup(index, 'ipi', 'IPI / CAE #', person.ipi, '00000000000') + inputMarkup(index, 'publisher', 'Publisher / admin', person.publisher, 'Self-published') + inputMarkup(index, 'publisherIpi', 'Publisher IPI', person.publisherIpi, 'Optional') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
+				row.innerHTML = savedPersonMarkup(index) + inputMarkup(index, 'name', 'Stage / credit name', person.name, 'Aria Rivers') + inputMarkup(index, 'legalName', 'Legal name', person.legalName, 'Aria Johnson') + inputMarkup(index, 'email', 'Email', person.email, 'aria@example.com') + selectMarkup(index, 'role', 'Role / perspective', person.role, roleOptions, 'Choose role') + selectMarkup(index, 'contribution', 'Contribution', person.contribution, contributionOptions, 'Choose contribution') + selectMarkup(index, 'pro', 'PRO', person.pro, proOptions, 'Choose PRO') + inputMarkup(index, 'ipi', 'IPI / CAE # required', person.ipi, '00000000000') + inputMarkup(index, 'publisher', 'Publisher / admin', person.publisher, 'Self-published') + inputMarkup(index, 'publisherIpi', 'Publisher IPI', person.publisherIpi, 'Optional') + inputMarkup(index, 'masterPercent', 'Master %', person.masterPercent, '0', 'number') + inputMarkup(index, 'publishingPercent', 'Publishing %', person.publishingPercent, '0', 'number') + '<button class="remove" type="button" aria-label="Remove collaborator">×</button>';
 				row.querySelectorAll('input, select').forEach((input) => input.addEventListener('input', (event) => updateCollaborator(index, event.target.dataset.key, event.target.value)));
 				row.querySelector('.remove').addEventListener('click', () => { state.draft.collaborators.splice(index, 1); if (!state.draft.collaborators.length) state.draft.collaborators.push(blankCollaborator()); renderCollaborators(); calculateTotals(); });
 				container.appendChild(row);
@@ -387,14 +405,57 @@ export function renderHtml(options: RenderOptions = {}) {
 			return '<div class="field"><label>' + label + '</label><input data-index="' + index + '" data-key="' + key + '" type="' + type + '"' + numeric + ' value="' + escapeHtml(value == null ? '' : String(value)) + '" placeholder="' + placeholder + '" /></div>';
 		}
 
-		function selectMarkup(index, key, label, value) {
-			const options = ['<option value="">Choose role</option>'].concat(roleOptions.map((role) => '<option value="' + escapeHtml(role) + '"' + (role === value ? ' selected' : '') + '>' + escapeHtml(role) + '</option>')).join('');
+		function selectMarkup(index, key, label, value, optionsList, placeholder) {
+			const options = ['<option value="">' + placeholder + '</option>'].concat(optionsList.map((item) => '<option value="' + escapeHtml(item) + '"' + (item === value ? ' selected' : '') + '>' + escapeHtml(item) + '</option>')).join('');
 			return '<div class="field"><label>' + label + '</label><select data-index="' + index + '" data-key="' + key + '">' + options + '</select></div>';
 		}
 
+		function savedPersonMarkup(index) {
+			const people = getSavedPeople();
+			const options = ['<option value="">Load previous person</option>'].concat(people.map((person, personIndex) => '<option value="' + personIndex + '">' + escapeHtml(person.name || person.legalName || person.email || 'Saved person') + (person.ipi ? ' • IPI ' + escapeHtml(person.ipi) : '') + '</option>')).join('');
+			return '<div class="field full"><label>Previous collaborators</label><select data-index="' + index + '" data-key="savedPerson">' + options + '</select></div>';
+		}
+
 		function updateCollaborator(index, key, value) {
+			if (key === 'savedPerson') {
+				applySavedPerson(index, value);
+				return;
+			}
 			state.draft.collaborators[index][key] = key.includes('Percent') ? Number(value || 0) : value;
 			calculateTotals();
+		}
+
+		function getSavedPeople() {
+			const people = [];
+			const seen = new Set();
+			((state.bootstrap && state.bootstrap.sheets) || []).forEach((sheet) => {
+				(sheet.collaborators || []).forEach((person) => {
+					const key = (person.email || person.ipi || person.legalName || person.name || '').toLowerCase();
+					if (!key || seen.has(key)) return;
+					seen.add(key);
+					people.push(person);
+				});
+			});
+			return people;
+		}
+
+		function applySavedPerson(index, personIndex) {
+			const person = getSavedPeople()[Number(personIndex)];
+			if (!person) return;
+			const current = state.draft.collaborators[index] || blankCollaborator();
+			state.draft.collaborators[index] = { ...blankCollaborator(), ...person, masterPercent: current.masterPercent || person.masterPercent || 0, publishingPercent: current.publishingPercent || person.publishingPercent || 0 };
+			renderCollaborators();
+			calculateTotals();
+			toast('Saved collaborator loaded.');
+		}
+
+		function addSavedPerson() {
+			const person = getSavedPeople()[0];
+			if (!person) { toast('Save a sheet first, then previous collaborators will appear here.'); return; }
+			state.draft.collaborators.push({ ...blankCollaborator(), ...person, masterPercent: 0, publishingPercent: 0 });
+			renderCollaborators();
+			calculateTotals();
+			toast('Previous collaborator added.');
 		}
 
 		function equalizeSplits(target) {
@@ -454,11 +515,13 @@ export function renderHtml(options: RenderOptions = {}) {
 			return issues.length ? 'Totals are editable. To finalize, ' + issues.join(' and ') + '.' : 'Totals are balanced at 100%. Ready to save.';
 		}
 
-		async function saveSheet(duplicate) {
+		async function saveSheet(duplicate, downloadAfter = false) {
 			syncDraftFromForm();
 			const payload = JSON.parse(JSON.stringify(state.draft));
 			if (duplicate) delete payload.id;
 			if (!payload.title) payload.title = 'Untitled Split Sheet';
+			const validation = validateSheet(payload);
+			if (validation) { toast(validation); el('saveStatus').textContent = validation; return; }
 			const response = await fetch('/api/sheets', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
 			const data = await response.json();
 			if (response.status === 402 || data.paywall) {
@@ -467,13 +530,48 @@ export function renderHtml(options: RenderOptions = {}) {
 				openUpgrade(data.message);
 				return;
 			}
+			if (!response.ok || data.error) {
+				toast(data.message || 'Please fix the split sheet before saving.');
+				el('saveStatus').textContent = data.message || 'Please fix the split sheet before saving.';
+				return;
+			}
 			state.bootstrap = data;
 			state.activeSheetId = data.activeSheetId;
 			const saved = data.sheets.find((sheet) => sheet.id === data.activeSheetId);
 			loadSheet(saved || payload);
 			renderShell();
-			toast('Split sheet saved.');
+			if (downloadAfter) downloadSheetFile(saved || payload);
+			toast(downloadAfter ? 'Split sheet saved and downloaded.' : 'Split sheet saved.');
 		}
+
+		function validateSheet(sheet) {
+			if (!sheet.title || !sheet.title.trim()) return 'Add a song title before saving.';
+			const credited = (sheet.collaborators || []).filter((person) => person.name || person.legalName || person.email);
+			if (!credited.length) return 'Add at least one collaborator with an IPI / CAE number before saving.';
+			const missingIpi = credited.find((person) => !person.ipi);
+			if (missingIpi) return 'IPI / CAE number is required for ' + (missingIpi.name || missingIpi.legalName || missingIpi.email) + ' before saving.';
+			return '';
+		}
+
+		function downloadSheetFile(sheet) {
+			const html = buildDownloadHtml(sheet);
+			const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(blob);
+			link.download = slugify(sheet.title || 'split-sheet') + '-split-sheet.html';
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+		}
+
+		function buildDownloadHtml(sheet) {
+			const collaborators = sheet.collaborators || [];
+			const rows = collaborators.map((person) => '<tr><td>' + escapeHtml(person.name || '') + '</td><td>' + escapeHtml(person.legalName || '') + '</td><td>' + escapeHtml(person.role || '') + '</td><td>' + escapeHtml(person.contribution || '') + '</td><td>' + escapeHtml(person.pro || '') + '</td><td>' + escapeHtml(person.ipi || '') + '</td><td>' + escapeHtml(person.publisher || '') + '</td><td>' + escapeHtml(String(person.masterPercent || 0)) + '%</td><td>' + escapeHtml(String(person.publishingPercent || 0)) + '%</td><td></td></tr>').join('');
+			return '<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(sheet.title || 'Split Sheet') + '</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111827}h1{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #d0d5dd;padding:8px;text-align:left;font-size:12px}.meta{color:#667085}.sig{height:52px}</style></head><body><h1>' + escapeHtml(sheet.title || 'Untitled Split Sheet') + '</h1><p class="meta">Artist: ' + escapeHtml(sheet.artist || '') + ' • Creation date: ' + escapeHtml(sheet.creationDate || '') + ' • ISRC: ' + escapeHtml(sheet.isrc || 'Add later') + '</p><table><thead><tr><th>Credit name</th><th>Legal name</th><th>Role</th><th>Contribution</th><th>PRO</th><th>IPI / CAE</th><th>Publisher</th><th>Master</th><th>Publishing</th><th>Signature</th></tr></thead><tbody>' + rows + '</tbody></table><p class="meta">Generated by SplitSheet. Confirm legal terms with counsel before distribution.</p></body></html>';
+		}
+
+		function slugify(value) { return String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'split-sheet'; }
 
 		async function deleteActiveSheet() {
 			if (!state.activeSheetId) { newSheet(); return; }

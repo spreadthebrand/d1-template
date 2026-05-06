@@ -64,7 +64,8 @@ async function handleApi(request: Request, env: AppEnv, url: URL): Promise<Respo
 	if (request.method === "POST" && url.pathname === "/api/sheets") {
 		const payload = (await request.json()) as SheetPayload;
 		const saved = await saveSheet(env, userId, payload);
-		return withUserCookie(request, json(saved, "paywall" in saved ? 402 : 200), userId);
+		const status = "paywall" in saved ? 402 : "error" in saved ? 400 : 200;
+		return withUserCookie(request, json(saved, status), userId);
 	}
 
 	if (request.method === "DELETE" && url.pathname.startsWith("/api/sheets/")) {
@@ -117,6 +118,22 @@ async function getBootstrap(env: AppEnv, userId: string) {
 
 async function saveSheet(env: AppEnv, userId: string, payload: SheetPayload) {
 	const collaborators = normalizeCollaborators(payload.collaborators ?? []);
+	const creditedCollaborators = collaborators.filter((person) => person.name || person.legalName || person.email);
+	if (!creditedCollaborators.length) {
+		return {
+			error: true,
+			message: "Add at least one collaborator with an IPI / CAE number before saving.",
+			...(await getBootstrap(env, userId)),
+		};
+	}
+	const missingIpi = creditedCollaborators.find((person) => !person.ipi);
+	if (missingIpi) {
+		return {
+			error: true,
+			message: `IPI / CAE number is required before saving. Add it for ${missingIpi.name || missingIpi.legalName || missingIpi.email}.`,
+			...(await getBootstrap(env, userId)),
+		};
+	}
 	const masterTotal = roundTotal(collaborators.reduce((sum, person) => sum + (person.masterPercent ?? 0), 0));
 	const publishingTotal = roundTotal(collaborators.reduce((sum, person) => sum + (person.publishingPercent ?? 0), 0));
 	const subscription = await getSubscription(env, userId);
