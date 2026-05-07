@@ -1,14 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root { color-scheme: dark; }
 body { @apply bg-navy-950 text-white antialiased; }
-a { @apply transition-colors; }
+.section { @apply mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8; }
+.card { @apply rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20; }
 .input { @apply w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-slate-500 outline-none focus:border-electric; }
 .label { @apply text-sm font-semibold text-slate-200; }
-.section { @apply mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8; }
-.card { @apply rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl shadow-black/20; }
 .btn-primary { @apply inline-flex items-center justify-center rounded-full bg-electric px-6 py-3 font-bold text-white shadow-glow hover:bg-blue-400; }
 .btn-secondary { @apply inline-flex items-center justify-center rounded-full border border-gold/50 px-6 py-3 font-bold text-gold hover:bg-gold hover:text-navy-950; }
-.prose-ccb { @apply prose prose-invert max-w-none prose-headings:text-white prose-a:text-electric prose-strong:text-white; }
+.prose-ccb { @apply prose prose-invert max-w-none prose-a:text-electric prose-strong:text-white; }

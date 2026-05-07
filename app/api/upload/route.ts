@@ -1,20 +1,2 @@
-import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { uploadSchema } from "@/lib/validation";
-import { requireRole } from "@/lib/apiAuth";
-
-export async function POST(req: Request) {
-  const auth = await requireRole();
-  if (auth.error) return auth.error;
-  const form = await req.formData();
-  const file = form.get("file");
-  if (!(file instanceof File)) return NextResponse.json({ error: "File is required" }, { status: 400 });
-  const parsed = uploadSchema.safeParse({ fileName: file.name, fileType: file.type, fileSize: file.size });
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  const safeName = `${Date.now()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-")}`;
-  const dir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, safeName), Buffer.from(await file.arrayBuffer()));
-  return NextResponse.json({ url: `/uploads/${safeName}`, provider: process.env.STORAGE_PROVIDER ?? "local" });
-}
+import { NextResponse } from "next/server"; import { writeFile, mkdir } from "fs/promises"; import path from "path"; import { uploadSchema } from "@/lib/validation"; import { requireRole } from "@/lib/apiAuth";
+export async function POST(req: Request) { const auth = await requireRole(); if (auth.error) return auth.error; const form = await req.formData(); const file = form.get("file"); if (!(file instanceof File)) return NextResponse.json({ error: "File is required" }, { status: 400 }); const parsed = uploadSchema.safeParse({ fileName: file.name, fileType: file.type, fileSize: file.size }); if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 }); const safeName = `${Date.now()}-${file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-")}`; const dir = path.join(process.cwd(), "public", "uploads"); await mkdir(dir, { recursive: true }); await writeFile(path.join(dir, safeName), Buffer.from(await file.arrayBuffer())); return NextResponse.json({ url: `/uploads/${safeName}`, provider: process.env.STORAGE_PROVIDER ?? "local" }); }

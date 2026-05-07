@@ -1,7 +1,8 @@
 {
-  "name": "ccb-network-platform",
-  "version": "0.1.0",
+  "name": "ccb-worldwide",
+  "version": "1.0.0",
   "private": true,
+  "description": "CCB Network - Connect, Create, & Build streaming-network launch platform.",
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/build.mjs",
@@ -13,8 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "deploy:preview": "npx vercel",
-    "deploy:vercel": "npx vercel --prod"
+    "deploy:vercel": "vercel --prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -42,15 +42,8 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/toptierprnews-source/ccb-worldwide.git"
-  },
-  "bugs": {
-    "url": "https://github.com/toptierprnews-source/ccb-worldwide/issues"
-  },
+  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "repository": { "type": "git", "url": "git+https://github.com/toptierprnews-source/ccb-worldwide.git" },
+  "bugs": { "url": "https://github.com/toptierprnews-source/ccb-worldwide/issues" },
   "homepage": "https://github.com/toptierprnews-source/ccb-worldwide#readme"
 }

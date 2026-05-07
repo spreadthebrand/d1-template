@@ -1,2 +1,2 @@
-// Stripe-ready placeholder. TODO: set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET, create products/prices for Builder, Network Pro, and Enterprise, then wire checkout/webhooks.
-export const stripeEnabled = () => Boolean(process.env.STRIPE_SECRET_KEY);
+// Placeholder for future stripe integration. TODO: add provider API keys, developer accounts, compliance review, and production workflow before enabling.
+export const stripeReady = () => false;
