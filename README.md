@@ -1,59 +1,52 @@
-# Worker + D1 Database
+# The Girls Room Creative Lock In — Cloudflare Worker
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+This project is a one-page Cloudflare Worker website for **The Girls Room Creative Lock In**. It includes an elegant event landing page, an active invite request form, file-upload metadata capture, sponsorship interest questions, required media-release consent, D1 database storage, and email forwarding to `freegameproductions@gmail.com`.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+## What the form does
 
-<!-- dash-content-start -->
+When a visitor submits the form, the Worker:
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+1. Validates required fields: name, email, creative lane, and media release consent.
+2. Saves the request to the `creative_lock_in_submissions` D1 table.
+3. Sends the submission details to FlowForm for forwarding to `freegameproductions@gmail.com`.
+4. Shows a custom thank-you message instead of crashing if the email provider is unavailable.
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+> Upload note: the form accepts files in the browser and stores/sends the uploaded file name. To permanently store full file contents, add Cloudflare R2 or another file-storage service.
+
+## Local development
+
+Install dependencies:
+
+```bash
+npm install
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Apply local D1 migrations:
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+```bash
+npm run seedLocalD1
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+Run the Worker locally:
 
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+```bash
+npx wrangler dev --ip 127.0.0.1 --port 8787
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+Open <http://127.0.0.1:8787>.
 
-## Setup Steps
+## Checks
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+```bash
+npm run check
+```
+
+## Deployment
+
+The deploy script applies remote migrations first and then deploys the Worker:
+
+```bash
+npm run deploy
+```
+
+If the live site ever shows a Cloudflare Worker error after a form submission, check that remote D1 migrations have been applied and that the email forwarding service has verified `freegameproductions@gmail.com` if required.
