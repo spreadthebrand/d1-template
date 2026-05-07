@@ -29,10 +29,10 @@ The previous Cloudflare D1 template deploy button is no longer appropriate becau
 2. Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.
 3. Import the repository into Vercel as a Next.js project, or run `npm run deploy:vercel` after authenticating with Vercel CLI.
 4. Add `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the hosting provider environment settings.
-5. Deploy the site, then run `npm run db:deploy` and `npm run prisma:seed` once against the production database.
+5. Deploy the site, then run `npm run db:deploy` and `npm run prisma:seed` once against the production database. The initial Prisma migration is committed under `prisma/migrations/20260507162000_init`.
 6. Visit `/deploy` in the application for an in-app deployment checklist.
 
-The included `vercel.json` makes the project show as a Next.js deployment and uses `npm run build`.
+The included `vercel.json` makes the project show as a Next.js deployment and uses `npm run build`. The build script supplies safe build-time placeholders for `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` so dependency generation does not fail before production environment variables are attached; real runtime values are still required before launch.
 
 ## Local setup
 
