@@ -1,4 +1,4 @@
-import { renderAdmin, renderDriveSetup, renderIntakeForm, renderSuccess } from "./renderHtml";
+import { renderAdmin, renderAdminLogin, renderDriveSetup, renderIntakeForm, renderSuccess } from "./renderHtml";
 
 type InternCandidate = {
 	id: number;
@@ -44,6 +44,17 @@ type DriveSyncResult = {
 	portfolio?: DriveUploadResult;
 };
 
+type SeedCandidate = {
+	candidateName: string;
+	email?: string;
+	desiredRole: string;
+	resumeReceived: "Yes" | "No";
+	portfolioReceived: "Yes" | "No";
+	interviewStatus: string;
+	notes: string;
+	priorityLevel: string;
+};
+
 const STATUS_OPTIONS = [
 	"New Lead",
 	"Resume Requested",
@@ -64,6 +75,32 @@ const ROLE_TRIAL_ASSIGNMENTS: Record<string, string> = {
 	Producer: "Submit 3 beats or production samples.",
 	Content: "Submit 2 short-form video ideas for the studio.",
 };
+
+const CURRENT_CANDIDATES: SeedCandidate[] = [
+	{ candidateName: "Devon L. Barnett", desiredRole: "Graphic Design Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: only graphic design candidate. Contact immediately and request resume plus design samples.", priorityLevel: "Highest" },
+	{ candidateName: "Tycian White", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: best direct match for photography. Request portfolio/sample work and schedule interview.", priorityLevel: "Highest" },
+	{ candidateName: "William Williams", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: strongest fit for artist-facing marketing. Request resume and schedule interview.", priorityLevel: "Highest" },
+	{ candidateName: "Elijah Victorian", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: artist/producer/engineer background. Request resume, portfolio, and music links.", priorityLevel: "Highest" },
+	{ candidateName: "Robert Garcia", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Strong studio support candidate. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Ralph Onwumere", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Audio engineer background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Cesar Sifuentes", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. HCC audio engineering background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Madeline Herrera", desiredRole: "Studio Staff / Broadcast Support", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Radio broadcast/master engineering background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Meaux Melody", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Brandon Molina", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Kareem Alsabur", desiredRole: "Marketing / Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing and producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Alan Jackson", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Keenon Taylor II", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Eduardo Primera", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Jonah Donnell", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Photography backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Esperanza Nolasco", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Photography backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Mason Richards", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Top producer candidate. Request beat links/music samples.", priorityLevel: "High" },
+	{ candidateName: "Trevin Richards", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Top producer candidate. Request beat links/music samples.", priorityLevel: "High" },
+	{ candidateName: "Jordan Moreno", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Donye Tolbert", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Anthony Chavarria", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Martarius Bolden", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+];
+
 
 function htmlResponse(html: string, init: ResponseInit = {}) {
 	return new Response(html, {
@@ -97,21 +134,29 @@ function getEnvValue(env: Env, key: string): string {
 	return typeof value === "string" ? value.trim() : "";
 }
 
+function getSuppliedAdminToken(request: Request): string {
+	const url = new URL(request.url);
+	return url.searchParams.get("token") ?? request.headers.get("x-admin-token") ?? "";
+}
+
+function getAdminQuery(request: Request): string {
+	const token = getSuppliedAdminToken(request);
+	return token ? `?token=${encodeURIComponent(token)}` : "";
+}
+
 function isAdmin(request: Request, env: Env): boolean {
 	const token = getEnvValue(env, "ADMIN_TOKEN");
 	if (!token) {
-		return true;
+		return false;
 	}
-	const url = new URL(request.url);
-	const suppliedToken = url.searchParams.get("token") ?? request.headers.get("x-admin-token") ?? "";
-	return suppliedToken === token;
+	return getSuppliedAdminToken(request) === token;
 }
 
 function requireAdmin(request: Request, env: Env): Response | undefined {
 	if (isAdmin(request, env)) {
 		return undefined;
 	}
-	return htmlResponse("<h1>Unauthorized</h1><p>Add your admin token to the URL as <code>?token=...</code>.</p>", { status: 401 });
+	return htmlResponse(renderAdminLogin(Boolean(getEnvValue(env, "ADMIN_TOKEN"))), { status: 401 });
 }
 
 function safeString(value: string | File | null): string {
@@ -226,7 +271,95 @@ async function uploadFilesToGoogleDrive(env: Env, candidateName: string, files: 
 	return (await driveResponse.json()) as DriveSyncResult;
 }
 
+
+async function ensureInternTables(env: Env): Promise<void> {
+	await env.DB.batch([
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_candidates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_name TEXT NOT NULL,
+			email TEXT,
+			phone TEXT,
+			desired_role TEXT NOT NULL DEFAULT 'New Lead',
+			resume_received TEXT NOT NULL DEFAULT 'No',
+			portfolio_received TEXT NOT NULL DEFAULT 'No',
+			interview_status TEXT NOT NULL DEFAULT 'New Lead',
+			notes TEXT NOT NULL DEFAULT '',
+			final_placement TEXT NOT NULL DEFAULT '',
+			weekly_availability TEXT NOT NULL DEFAULT '',
+			portfolio_url TEXT NOT NULL DEFAULT '',
+			resume_file_name TEXT NOT NULL DEFAULT '',
+			portfolio_file_name TEXT NOT NULL DEFAULT '',
+			google_drive_resume_url TEXT NOT NULL DEFAULT '',
+			google_drive_portfolio_url TEXT NOT NULL DEFAULT '',
+			trial_assignment TEXT NOT NULL DEFAULT '',
+			priority_level TEXT NOT NULL DEFAULT 'Normal',
+			source TEXT NOT NULL DEFAULT 'Intern Intake Form',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_contacted_at TEXT,
+			UNIQUE(candidate_name, desired_role)
+		)`),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_status ON intern_candidates(interview_status)"),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_role ON intern_candidates(desired_role)"),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_priority ON intern_candidates(priority_level)"),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_activity_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_id INTEGER,
+			action TEXT NOT NULL,
+			details TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(candidate_id) REFERENCES intern_candidates(id) ON DELETE CASCADE
+		)`),
+	]);
+
+	const existing = await env.DB.prepare("SELECT COUNT(*) AS total FROM intern_candidates").first<{ total: number }>();
+	if ((existing?.total ?? 0) > 0) {
+		return;
+	}
+
+	await env.DB.batch(CURRENT_CANDIDATES.map((candidate) => env.DB.prepare(`
+		INSERT OR IGNORE INTO intern_candidates
+		(candidate_name, email, desired_role, resume_received, portfolio_received, interview_status, notes, priority_level, source, trial_assignment)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Initial intern placement report', ?)
+	`).bind(
+		candidate.candidateName,
+		candidate.email ?? "",
+		candidate.desiredRole,
+		candidate.resumeReceived,
+		candidate.portfolioReceived,
+		candidate.interviewStatus,
+		candidate.notes,
+		candidate.priorityLevel,
+		inferTrialAssignment(candidate.desiredRole),
+	)));
+}
+
+function parseImportLine(line: string): SeedCandidate | undefined {
+	const trimmed = line.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	const cells = trimmed.includes(",") ? trimmed.split(",").map((cell) => cell.trim()) : trimmed.split(/\s+[—-]\s+/).map((cell) => cell.trim());
+	const candidateName = cells[0] ?? "";
+	const email = trimmed.includes(",") ? cells[1] ?? "" : "";
+	const desiredRole = cells[2] && trimmed.includes(",") ? cells[2] : cells[1] ?? "New Lead";
+	if (!candidateName || candidateName.toLowerCase() === "candidate name" || candidateName.toLowerCase() === "name") {
+		return undefined;
+	}
+	return {
+		candidateName,
+		email,
+		desiredRole: desiredRole || "New Lead",
+		resumeReceived: cells[3]?.toLowerCase() === "yes" ? "Yes" : "No",
+		portfolioReceived: cells[4]?.toLowerCase() === "yes" ? "Yes" : "No",
+		interviewStatus: STATUS_OPTIONS.includes(cells[5] as (typeof STATUS_OPTIONS)[number]) ? cells[5] as (typeof STATUS_OPTIONS)[number] : "New Lead",
+		notes: cells[6] ?? "Imported from current list.",
+		priorityLevel: "Normal",
+	};
+}
+
 async function listCandidates(env: Env): Promise<InternCandidate[]> {
+	await ensureInternTables(env);
 	const { results } = await env.DB.prepare("SELECT * FROM intern_candidates ORDER BY CASE priority_level WHEN 'Highest' THEN 0 WHEN 'High' THEN 1 WHEN 'Backup' THEN 2 ELSE 3 END, updated_at DESC, candidate_name ASC").all<InternCandidate>();
 	return results;
 }
@@ -244,6 +377,7 @@ async function getStats(env: Env): Promise<DashboardStats> {
 }
 
 async function createCandidate(request: Request, env: Env): Promise<Response> {
+	await ensureInternTables(env);
 	const form = await request.formData();
 	const candidateName = safeString(form.get("candidate_name"));
 	const desiredRole = safeString(form.get("desired_role"));
@@ -298,6 +432,7 @@ async function updateCandidate(request: Request, env: Env): Promise<Response> {
 	if (unauthorized) {
 		return unauthorized;
 	}
+	await ensureInternTables(env);
 	const form = await request.formData();
 	const id = Number(safeString(form.get("id")));
 	if (!Number.isInteger(id)) {
@@ -335,7 +470,42 @@ async function updateCandidate(request: Request, env: Env): Promise<Response> {
 		.bind(id, `Status changed to ${interviewStatus}.`)
 		.run();
 
-	return redirect("/admin");
+	return redirect(`/admin${getAdminQuery(request)}`);
+}
+
+async function importCandidates(request: Request, env: Env): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const lines = safeString(form.get("candidate_list")).split(/\r?\n/);
+	const candidates = lines.map(parseImportLine).filter((candidate): candidate is SeedCandidate => Boolean(candidate));
+	if (candidates.length === 0) {
+		return redirect(`/admin${getAdminQuery(request)}`);
+	}
+	await env.DB.batch(candidates.map((candidate) => env.DB.prepare(`
+		INSERT INTO intern_candidates
+		(candidate_name, email, desired_role, resume_received, portfolio_received, interview_status, notes, priority_level, source, trial_assignment, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Admin current-list import', ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(candidate_name, desired_role) DO UPDATE SET
+			interview_status = excluded.interview_status,
+			email = CASE WHEN intern_candidates.email IS NULL OR intern_candidates.email = '' THEN excluded.email ELSE intern_candidates.email END,
+			notes = CASE WHEN intern_candidates.notes = '' THEN excluded.notes ELSE intern_candidates.notes END,
+			updated_at = CURRENT_TIMESTAMP
+	`).bind(
+		candidate.candidateName,
+		candidate.email ?? "",
+		candidate.desiredRole,
+		candidate.resumeReceived,
+		candidate.portfolioReceived,
+		candidate.interviewStatus,
+		candidate.notes,
+		candidate.priorityLevel,
+		inferTrialAssignment(candidate.desiredRole),
+	)));
+	return redirect(`/admin${getAdminQuery(request)}`);
 }
 
 async function handleRequest(request: Request, env: Env): Promise<Response> {
@@ -354,11 +524,15 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 		if (unauthorized) {
 			return unauthorized;
 		}
-		return htmlResponse(renderAdmin(await listCandidates(env), await getStats(env), STATUS_OPTIONS));
+		return htmlResponse(renderAdmin(await listCandidates(env), await getStats(env), STATUS_OPTIONS, getAdminQuery(request)));
 	}
 
 	if (request.method === "POST" && url.pathname === "/admin/update") {
 		return updateCandidate(request, env);
+	}
+
+	if (request.method === "POST" && url.pathname === "/admin/import") {
+		return importCandidates(request, env);
 	}
 
 	if (request.method === "GET" && url.pathname === "/api/candidates") {

@@ -11,16 +11,42 @@ This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow
 - Stores candidates and activity logs in Cloudflare D1.
 - Exports the tracker as CSV for Google Sheets.
 - Uploads files to Google Drive when a Google Apps Script webhook is configured.
+- Keeps the tracker admin-only with `ADMIN_TOKEN`; the public intake form no longer links directly to candidate names.
 
 ## Important Routes
 
 | Route | Purpose |
 | --- | --- |
 | `/` | Public intern intake form for new candidates. |
-| `/admin` | Rere's admin tracker and weekly update dashboard. |
+| `/admin` | Admin-token protected tracker login for Rere's dashboard. |
 | `/api/candidates` | JSON feed of stats and candidates for integrations. |
-| `/export.csv` | CSV export for Google Sheets / Google Drive workflows. |
+| `/export.csv?token=ADMIN_TOKEN` | CSV export for Google Sheets / Google Drive workflows. |
 | `/google-drive-setup` | Google Apps Script setup instructions for Drive uploads. |
+
+
+## Admin Access
+
+The tracker is intentionally private. Set an `ADMIN_TOKEN` before using the admin dashboard:
+
+```bash
+npx wrangler secret put ADMIN_TOKEN
+```
+
+Then open `/admin`, enter the token, and the app will keep that token on admin-only links and save buttons. If `ADMIN_TOKEN` is not configured, `/admin` shows a setup warning instead of exposing the candidate list.
+
+The admin dashboard includes an **Import Current Candidate List** box so you can paste the current intern list for Rere without displaying candidate names on the public intake form. Supported formats are:
+
+```text
+Devon L. Barnett — Graphic Design Intern
+Tycian White — Photography Intern
+```
+
+or CSV:
+
+```text
+Name, Email, Role, Resume Received, Portfolio Received, Status, Notes
+Devon L. Barnett,,Graphic Design Intern,No,No,Resume Requested,Only graphic design candidate
+```
 
 ## Local Setup
 
@@ -30,19 +56,25 @@ This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow
    npm install
    ```
 
-2. Apply local D1 migrations:
+2. For local admin testing, create a temporary `.dev.vars` file with an admin token:
+
+   ```bash
+   printf "ADMIN_TOKEN=test\n" > .dev.vars
+   ```
+
+3. Apply local D1 migrations:
 
    ```bash
    npx wrangler d1 migrations apply DB --local
    ```
 
-3. Start local development:
+4. Start local development:
 
    ```bash
    npm run dev
    ```
 
-4. Open the local Worker URL shown by Wrangler.
+5. Open the local Worker URL shown by Wrangler and visit `/admin?token=test` for the local tracker.
 
 ## Google Drive Connection
 
@@ -57,7 +89,6 @@ Cloudflare Workers cannot access your Google Drive unless you provide a Google-s
    ```bash
    npx wrangler secret put GOOGLE_DRIVE_WEBHOOK_URL
    npx wrangler secret put GOOGLE_DRIVE_SHARED_SECRET
-   npx wrangler secret put ADMIN_TOKEN
    ```
 
 When configured, new resume and portfolio uploads are copied into candidate-specific folders under `1 Soundvibe Studios Intern Intake` in Google Drive, and returned Drive links are saved in D1.

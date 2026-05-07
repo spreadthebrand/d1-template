@@ -131,7 +131,7 @@ export function renderIntakeForm(): string {
 				<label>Portfolio / Work Sample Upload<input type="file" name="portfolio_file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.wav,.mp4,.mov,.zip" /></label>
 			</div>
 			<label>Notes<textarea name="notes" placeholder="Tell us about your experience, tools you use, artists you like, or what you want to learn."></textarea></label>
-			<div class="actions"><button type="submit">Submit Intern Intake</button><a class="button light" href="/admin">Open Tracker</a></div>
+			<div class="actions"><button type="submit">Submit Intern Intake</button></div>
 		</form>
 	</section>
 	<section class="card">
@@ -151,36 +151,56 @@ export function renderSuccess(candidateName: string, driveSync: DriveSyncResultV
 		: `<p class="notice">Submission saved. Google Drive file sync will activate after <code>GOOGLE_DRIVE_WEBHOOK_URL</code> is configured.</p>`;
 	return page("Intern Intake Submitted", `
 <header class="hero"><h1>Submission Received</h1><p>Thank you, ${escapeHtml(candidateName)}. Rere will review your intake details and follow up about interviews/orientation.</p></header>
-<main><section class="card">${driveMessage}<div class="actions"><a class="button" href="/">Submit Another Candidate</a><a class="button secondary" href="/admin">View Tracker</a></div></section></main>`);
+<main><section class="card">${driveMessage}<div class="actions"><a class="button" href="/">Submit Another Candidate</a></div></section></main>`);
 }
 
 function optionTags(options: readonly string[], selected: string): string {
 	return options.map((option) => `<option value="${escapeHtml(option)}" ${option === selected ? "selected" : ""}>${escapeHtml(option)}</option>`).join("");
 }
 
-function candidateRow(candidate: InternCandidateView, statusOptions: readonly string[]): string {
+function formAttr(formId: string): string {
+	return ` form="${formId}"`;
+}
+
+function candidateRow(candidate: InternCandidateView, statusOptions: readonly string[], adminQuery: string): string {
+	const formId = `candidate-${candidate.id}`;
+	const attr = formAttr(formId);
 	return `<tr>
 	<td><strong>${escapeHtml(candidate.candidate_name)}</strong><br><span class="badge ${candidate.priority_level === "Highest" ? "highest" : ""}">${escapeHtml(candidate.priority_level)}</span><p class="small">Created: ${escapeHtml(candidate.created_at)}<br>Updated: ${escapeHtml(candidate.updated_at)}</p></td>
-	<td><form method="post" action="/admin/update"><input type="hidden" name="id" value="${candidate.id}" /><label>Email<input name="email" value="${escapeHtml(candidate.email)}" /></label><label>Phone<input name="phone" value="${escapeHtml(candidate.phone)}" /></label></td>
-	<td><label>Role<input name="desired_role" value="${escapeHtml(candidate.desired_role)}" /></label><label>Availability<textarea name="weekly_availability">${escapeHtml(candidate.weekly_availability)}</textarea></label></td>
-	<td><label>Resume<select name="resume_received"><option ${candidate.resume_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.resume_received !== "Yes" ? "selected" : ""}>No</option></select></label>${candidate.google_drive_resume_url ? `<a href="${escapeHtml(candidate.google_drive_resume_url)}" target="_blank" rel="noreferrer">Drive resume</a>` : ""}</td>
-	<td><label>Portfolio<select name="portfolio_received"><option ${candidate.portfolio_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.portfolio_received !== "Yes" ? "selected" : ""}>No</option></select></label><label>Portfolio URL<textarea name="portfolio_url">${escapeHtml(candidate.portfolio_url)}</textarea></label>${candidate.google_drive_portfolio_url ? `<a href="${escapeHtml(candidate.google_drive_portfolio_url)}" target="_blank" rel="noreferrer">Drive portfolio</a>` : ""}</td>
-	<td><label>Status<select name="interview_status">${optionTags(statusOptions, candidate.interview_status)}</select></label><label>Final Placement<input name="final_placement" value="${escapeHtml(candidate.final_placement)}" /></label></td>
-	<td><label>Trial Assignment<textarea name="trial_assignment">${escapeHtml(candidate.trial_assignment)}</textarea></label><label>Notes<textarea name="notes">${escapeHtml(candidate.notes)}</textarea></label></td>
-	<td><label>Priority<input name="priority_level" value="${escapeHtml(candidate.priority_level)}" /></label><label>Last Contacted<input type="date" name="last_contacted_at" value="${escapeHtml(candidate.last_contacted_at)}" /></label><button type="submit">Save</button></form></td>
+	<td><label>Email<input${attr} name="email" value="${escapeHtml(candidate.email)}" /></label><label>Phone<input${attr} name="phone" value="${escapeHtml(candidate.phone)}" /></label></td>
+	<td><label>Role<input${attr} name="desired_role" value="${escapeHtml(candidate.desired_role)}" /></label><label>Availability<textarea${attr} name="weekly_availability">${escapeHtml(candidate.weekly_availability)}</textarea></label></td>
+	<td><label>Resume<select${attr} name="resume_received"><option ${candidate.resume_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.resume_received !== "Yes" ? "selected" : ""}>No</option></select></label>${candidate.google_drive_resume_url ? `<a href="${escapeHtml(candidate.google_drive_resume_url)}" target="_blank" rel="noreferrer">Drive resume</a>` : ""}</td>
+	<td><label>Portfolio<select${attr} name="portfolio_received"><option ${candidate.portfolio_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.portfolio_received !== "Yes" ? "selected" : ""}>No</option></select></label><label>Portfolio URL<textarea${attr} name="portfolio_url">${escapeHtml(candidate.portfolio_url)}</textarea></label>${candidate.google_drive_portfolio_url ? `<a href="${escapeHtml(candidate.google_drive_portfolio_url)}" target="_blank" rel="noreferrer">Drive portfolio</a>` : ""}</td>
+	<td><label>Status<select${attr} name="interview_status">${optionTags(statusOptions, candidate.interview_status)}</select></label><label>Final Placement<input${attr} name="final_placement" value="${escapeHtml(candidate.final_placement)}" /></label></td>
+	<td><label>Trial Assignment<textarea${attr} name="trial_assignment">${escapeHtml(candidate.trial_assignment)}</textarea></label><label>Notes<textarea${attr} name="notes">${escapeHtml(candidate.notes)}</textarea></label></td>
+	<td><form id="${formId}" method="post" action="/admin/update${escapeHtml(adminQuery)}"><input type="hidden" name="id" value="${candidate.id}" /><label>Priority<input name="priority_level" value="${escapeHtml(candidate.priority_level)}" /></label><label>Last Contacted<input type="date" name="last_contacted_at" value="${escapeHtml(candidate.last_contacted_at)}" /></label><button type="submit">Save</button></form></td>
 </tr>`;
 }
 
-export function renderAdmin(candidates: InternCandidateView[], stats: DashboardStatsView, statusOptions: readonly string[]): string {
+export function renderAdminLogin(hasTokenConfigured: boolean): string {
+	return page("Admin Login", `
+<header class="hero"><p class="badge">Admin only</p><h1>Tracker Login</h1><p>The intern tracker is private. Enter the admin token to manage Rere's candidate list.</p></header>
+<main>
+	<section class="card">
+		${hasTokenConfigured ? "" : `<p class="notice"><strong>ADMIN_TOKEN is not configured yet.</strong> Add it as a Worker secret before exposing the tracker.</p>`}
+		<form method="get" action="/admin">
+			<label>Admin Token<input name="token" type="password" autocomplete="current-password" required /></label>
+			<div class="actions"><button type="submit">Open Admin Tracker</button><a class="button light" href="/">Back to Intake Form</a></div>
+		</form>
+	</section>
+</main>`);
+}
+
+export function renderAdmin(candidates: InternCandidateView[], stats: DashboardStatsView, statusOptions: readonly string[], adminQuery: string): string {
 	return page("1SV Intern Admin Tracker", `
 <header class="hero">
-	<p class="badge">Assigned to Rere • Support by Brittany / BB Management</p>
+	<p class="badge">Admin tracker • Assigned to Rere • Support by Brittany / BB Management</p>
 	<h1>Intern Tracker</h1>
 	<p>Manage first contact, resume/portfolio collection, interview scheduling, trial assignments, final placement recommendations, and Lafayette Taylor's final acceptance review.</p>
 </header>
 <main>
 	<section class="card">
-		<div class="actions"><a class="button" href="/">Public Intake Form</a><a class="button secondary" href="/export.csv">Export CSV for Google Sheets</a><a class="button light" href="/google-drive-setup">Google Drive Setup</a><a class="button light" href="/api/candidates">JSON API</a></div>
+		<div class="actions"><a class="button" href="/">Public Intake Form</a><a class="button secondary" href="/export.csv${escapeHtml(adminQuery)}">Export CSV for Google Sheets</a><a class="button light" href="/google-drive-setup">Google Drive Setup</a><a class="button light" href="/api/candidates${escapeHtml(adminQuery)}">JSON API</a></div>
 	</section>
 	<section class="grid">
 		<div class="stat"><span>Total Candidates</span><strong>${stats.total}</strong></div>
@@ -189,6 +209,14 @@ export function renderAdmin(candidates: InternCandidateView[], stats: DashboardS
 		<div class="stat"><span>Interviews Scheduled</span><strong>${stats.interviewsScheduled}</strong></div>
 		<div class="stat"><span>Accepted / Placed</span><strong>${stats.accepted}</strong></div>
 		<div class="stat"><span>Google Drive</span><strong>${stats.googleDriveConnected ? "Connected" : "Setup Needed"}</strong></div>
+	</section>
+	<section class="card">
+		<h2>Import Current Candidate List</h2>
+		<p class="small">Paste the current list here so Rere can start the process without showing names on the public intake form. Use either <code>Name — Role</code> or CSV columns: <code>Name, Email, Role, Resume Received, Portfolio Received, Status, Notes</code>.</p>
+		<form method="post" action="/admin/import${escapeHtml(adminQuery)}">
+			<label>Current List<textarea name="candidate_list" placeholder="Devon L. Barnett — Graphic Design Intern&#10;Tycian White — Photography Intern"></textarea></label>
+			<button type="submit">Import / Update Current List</button>
+		</form>
 	</section>
 	<section class="card">
 		<h2>Weekly Update Template</h2>
@@ -215,7 +243,7 @@ Next week’s priority:</pre>
 	</section>
 	<section class="card">
 		<h2>Candidate Tracker</h2>
-		<div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Contact</th><th>Role / Availability</th><th>Resume</th><th>Portfolio</th><th>Interview / Placement</th><th>Notes / Trial</th><th>Actions</th></tr></thead><tbody>${candidates.map((candidate) => candidateRow(candidate, statusOptions)).join("")}</tbody></table></div>
+		<div class="table-wrap"><table><thead><tr><th>Candidate</th><th>Contact</th><th>Role / Availability</th><th>Resume</th><th>Portfolio</th><th>Interview / Placement</th><th>Notes / Trial</th><th>Actions</th></tr></thead><tbody>${candidates.map((candidate) => candidateRow(candidate, statusOptions, adminQuery)).join("")}</tbody></table></div>
 	</section>
 </main>`);
 }
