@@ -8,9 +8,9 @@ This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow
 - Seeds the tracker with the current priority intern list for Rere and Brittany / BB Management to manage.
 - Tracks the required columns: candidate name, email, desired role, resume received, portfolio received, interview status, notes, and final placement.
 - Supports statuses: New Lead, Resume Requested, Resume Received, Interview Scheduled, Interview Completed, Accepted, Not Selected, and Future Consideration.
-- Stores candidates and activity logs in Cloudflare D1.
+- Stores candidates, uploaded files, webhook settings, webhook events, and activity logs in Cloudflare D1.
 - Exports the tracker as CSV for Google Sheets.
-- Uploads files to Google Drive when a Google Apps Script webhook is configured.
+- Connects Google Drive and notification webhooks from the admin portal; uploads are saved in Cloudflare first and then copied to Drive when configured.
 - Keeps the tracker admin-only with `ADMIN_TOKEN`; the public intake form links to the token-protected portal, not to candidate names.
 - Clearly shows where data is saved: candidate details in Cloudflare D1 and uploaded files in Google Drive when Drive sync is connected.
 
@@ -28,8 +28,9 @@ This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow
 ## Where Everything Is Saved
 
 - **Candidate tracker records** are saved in the Cloudflare D1 database configured in `wrangler.json` as binding `DB` and database name `d1-template-database`. The main table is `intern_candidates`; activity history is saved in `intern_activity_log`.
-- **Uploaded resume and portfolio files** are sent to Google Drive only after `GOOGLE_DRIVE_WEBHOOK_URL` and `GOOGLE_DRIVE_SHARED_SECRET` are configured. The Drive folder name is `1 Soundvibe Studios Intern Intake`, and each candidate row stores the returned Drive URL.
-- **Admin portal** is available at `/portal` and `/admin`. It requires `ADMIN_TOKEN` and shows all candidates, current-list imports, statuses, notes, trial assignments, final placements, CSV export, JSON API, and Drive links.
+- **Uploaded resume and portfolio files** are saved in Cloudflare D1 table `intern_files` first. After the Google Apps Script webhook is connected in the admin portal, files are also copied to Google Drive folder `1 Soundvibe Studios Intern Intake`, and each candidate row stores the returned Drive URL.
+- **Admin portal** is available at `/portal` and `/admin`. It requires `ADMIN_TOKEN` and shows all candidates, current-list imports, statuses, notes, trial assignments, final placements, Cloudflare file downloads, CSV export, JSON API, Drive links, and webhook connection forms.
+- **Integration settings and webhook logs** are saved in Cloudflare D1 tables `integration_settings` and `webhook_events`.
 
 ## Admin Access
 
@@ -82,6 +83,19 @@ Devon L. Barnett,,Graphic Design Intern,No,No,Resume Requested,Only graphic desi
    ```
 
 5. Open the local Worker URL shown by Wrangler and visit `/portal?token=test` for the local admin portal.
+
+## Webhook / Google Connection From Admin Portal
+
+1. Open `/portal` with the admin token.
+2. Use **Webhook & Google Drive Connections** to paste:
+   - Google Apps Script Webhook URL.
+   - Google shared secret.
+   - Optional new-intake notification webhook URL, such as Zapier, Make, Slack, or CRM.
+   - Inbound webhook secret for callbacks.
+3. Open `/google-drive-setup?token=ADMIN_TOKEN`, copy the Apps Script, deploy it in Google, and paste the deployed Apps Script URL back into the admin portal.
+4. New intake submissions now save records and uploaded files in Cloudflare D1 first, then call the configured Google webhook and log callback/status events in Cloudflare.
+
+The inbound Google callback endpoint is `/webhooks/google-drive`.
 
 ## Google Drive Connection
 

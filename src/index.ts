@@ -23,6 +23,7 @@ type InternCandidate = {
 	created_at: string;
 	updated_at: string;
 	last_contacted_at: string | null;
+	cloudflare_files?: string;
 };
 
 type DashboardStats = {
@@ -32,6 +33,16 @@ type DashboardStats = {
 	interviewsScheduled: number;
 	accepted: number;
 	googleDriveConnected: boolean;
+	cloudflareFiles: number;
+	webhookEvents: number;
+};
+
+type IntegrationSettings = {
+	googleDriveWebhookUrl: string;
+	googleDriveSharedSecretConfigured: boolean;
+	notificationWebhookUrl: string;
+	notificationWebhookConfigured: boolean;
+	inboundWebhookSecretConfigured: boolean;
 };
 
 type DriveUploadResult = {
@@ -42,6 +53,14 @@ type DriveUploadResult = {
 type DriveSyncResult = {
 	resume?: DriveUploadResult;
 	portfolio?: DriveUploadResult;
+};
+
+type PreparedUpload = {
+	kind: string;
+	fileName: string;
+	contentType: string;
+	size: number;
+	data: string;
 };
 
 type SeedCandidate = {
@@ -132,6 +151,10 @@ function redirect(location: string) {
 function getEnvValue(env: Env, key: string): string {
 	const value = (env as unknown as Record<string, string | undefined>)[key];
 	return typeof value === "string" ? value.trim() : "";
+}
+
+function getStorageLabel(): string {
+	return "Cloudflare D1 tables intern_candidates, intern_files, intern_activity_log, integration_settings, and webhook_events";
 }
 
 function getSuppliedAdminToken(request: Request): string {
@@ -231,28 +254,52 @@ async function fileToBase64(file: File): Promise<string> {
 	return btoa(binary);
 }
 
-async function uploadFilesToGoogleDrive(env: Env, candidateName: string, files: { resume?: File; portfolio?: File }): Promise<DriveSyncResult> {
-	const webhookUrl = getEnvValue(env, "GOOGLE_DRIVE_WEBHOOK_URL");
-	if (!webhookUrl) {
-		return {};
+function base64ToBytes(data: string): Uint8Array {
+	const binary = atob(data);
+	const bytes = new Uint8Array(binary.length);
+	for (let index = 0; index < binary.length; index++) {
+		bytes[index] = binary.charCodeAt(index);
 	}
+	return bytes;
+}
 
-	const sharedSecret = getEnvValue(env, "GOOGLE_DRIVE_SHARED_SECRET");
-	const uploads = await Promise.all(
+async function prepareUploads(files: { resume?: File; portfolio?: File }): Promise<PreparedUpload[]> {
+	return Promise.all(
 		Object.entries(files)
 			.filter(([, file]) => file instanceof File && file.size > 0)
 			.map(async ([kind, file]) => ({
 				kind,
 				fileName: file.name,
 				contentType: file.type || "application/octet-stream",
+				size: file.size,
 				data: await fileToBase64(file),
 			})),
 	);
+}
 
-	if (uploads.length === 0) {
+async function getConfiguredValue(env: Env, key: string, envKey: string): Promise<string> {
+	await ensureInternTables(env);
+	const row = await env.DB.prepare("SELECT setting_value FROM integration_settings WHERE setting_key = ?").bind(key).first<{ setting_value: string }>();
+	return (row?.setting_value || getEnvValue(env, envKey)).trim();
+}
+
+async function getIntegrationSettings(env: Env): Promise<IntegrationSettings> {
+	return {
+		googleDriveWebhookUrl: await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL"),
+		googleDriveSharedSecretConfigured: Boolean(await getConfiguredValue(env, "google_drive_shared_secret", "GOOGLE_DRIVE_SHARED_SECRET")),
+		notificationWebhookUrl: await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL"),
+		notificationWebhookConfigured: Boolean(await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL")),
+		inboundWebhookSecretConfigured: Boolean(await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET")),
+	};
+}
+
+async function uploadFilesToGoogleDrive(env: Env, candidateName: string, uploads: PreparedUpload[]): Promise<DriveSyncResult> {
+	const webhookUrl = await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL");
+	if (!webhookUrl || uploads.length === 0) {
 		return {};
 	}
 
+	const sharedSecret = await getConfiguredValue(env, "google_drive_shared_secret", "GOOGLE_DRIVE_SHARED_SECRET");
 	const driveResponse = await fetch(webhookUrl, {
 		method: "POST",
 		headers: { "content-type": "application/json" },
@@ -264,11 +311,31 @@ async function uploadFilesToGoogleDrive(env: Env, candidateName: string, files: 
 		}),
 	});
 
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('outbound', 'google_drive', 'file_upload', ?, ?)")
+		.bind(driveResponse.ok ? "success" : "failed", JSON.stringify({ candidateName, status: driveResponse.status }))
+		.run();
+
 	if (!driveResponse.ok) {
 		return {};
 	}
 
 	return (await driveResponse.json()) as DriveSyncResult;
+}
+
+async function notifyIntakeWebhook(env: Env, candidate: Record<string, unknown>): Promise<void> {
+	const webhookUrl = await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL");
+	if (!webhookUrl) {
+		return;
+	}
+	const sharedSecret = await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET");
+	const response = await fetch(webhookUrl, {
+		method: "POST",
+		headers: { "content-type": "application/json", ...(sharedSecret ? { "x-1sv-webhook-secret": sharedSecret } : {}) },
+		body: JSON.stringify({ event: "intern_intake.created", storage: getStorageLabel(), candidate }),
+	});
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('outbound', 'notification', 'intern_intake.created', ?, ?)")
+		.bind(response.ok ? "success" : "failed", JSON.stringify({ status: response.status, candidate }))
+		.run();
 }
 
 
@@ -309,6 +376,33 @@ async function ensureInternTables(env: Env): Promise<void> {
 			details TEXT NOT NULL DEFAULT '',
 			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY(candidate_id) REFERENCES intern_candidates(id) ON DELETE CASCADE
+		)`),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_files (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_id INTEGER NOT NULL,
+			file_kind TEXT NOT NULL,
+			file_name TEXT NOT NULL,
+			content_type TEXT NOT NULL,
+			file_size INTEGER NOT NULL DEFAULT 0,
+			base64_data TEXT NOT NULL,
+			google_drive_url TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(candidate_id) REFERENCES intern_candidates(id) ON DELETE CASCADE
+		)`),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_files_candidate ON intern_files(candidate_id)"),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS integration_settings (
+			setting_key TEXT PRIMARY KEY,
+			setting_value TEXT NOT NULL DEFAULT '',
+			updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS webhook_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			direction TEXT NOT NULL,
+			provider TEXT NOT NULL,
+			event_type TEXT NOT NULL,
+			status TEXT NOT NULL,
+			payload TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)`),
 	]);
 
@@ -360,19 +454,29 @@ function parseImportLine(line: string): SeedCandidate | undefined {
 
 async function listCandidates(env: Env): Promise<InternCandidate[]> {
 	await ensureInternTables(env);
-	const { results } = await env.DB.prepare("SELECT * FROM intern_candidates ORDER BY CASE priority_level WHEN 'Highest' THEN 0 WHEN 'High' THEN 1 WHEN 'Backup' THEN 2 ELSE 3 END, updated_at DESC, candidate_name ASC").all<InternCandidate>();
+	const { results } = await env.DB.prepare(`
+		SELECT c.*, COALESCE(GROUP_CONCAT(f.id || '::' || f.file_kind || '::' || f.file_name, '||'), '') AS cloudflare_files
+		FROM intern_candidates c
+		LEFT JOIN intern_files f ON f.candidate_id = c.id
+		GROUP BY c.id
+		ORDER BY CASE c.priority_level WHEN 'Highest' THEN 0 WHEN 'High' THEN 1 WHEN 'Backup' THEN 2 ELSE 3 END, c.updated_at DESC, c.candidate_name ASC
+	`).all<InternCandidate>();
 	return results;
 }
 
 async function getStats(env: Env): Promise<DashboardStats> {
 	const candidates = await listCandidates(env);
+	const fileCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM intern_files").first<{ total: number }>();
+	const eventCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM webhook_events").first<{ total: number }>();
 	return {
 		total: candidates.length,
 		resumesReceived: candidates.filter((candidate) => candidate.resume_received === "Yes").length,
 		pendingResumes: candidates.filter((candidate) => candidate.resume_received !== "Yes").length,
 		interviewsScheduled: candidates.filter((candidate) => candidate.interview_status === "Interview Scheduled").length,
 		accepted: candidates.filter((candidate) => candidate.interview_status === "Accepted" || candidate.final_placement).length,
-		googleDriveConnected: Boolean(getEnvValue(env, "GOOGLE_DRIVE_WEBHOOK_URL")),
+		googleDriveConnected: Boolean(await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL")),
+		cloudflareFiles: fileCount?.total ?? 0,
+		webhookEvents: eventCount?.total ?? 0,
 	};
 }
 
@@ -389,7 +493,8 @@ async function createCandidate(request: Request, env: Env): Promise<Response> {
 	const portfolioFile = form.get("portfolio_file");
 	const resumeFile = resume instanceof File && resume.size > 0 ? resume : undefined;
 	const uploadedPortfolioFile = portfolioFile instanceof File && portfolioFile.size > 0 ? portfolioFile : undefined;
-	const driveSync = await uploadFilesToGoogleDrive(env, candidateName, { resume: resumeFile, portfolio: uploadedPortfolioFile });
+	const uploads = await prepareUploads({ resume: resumeFile, portfolio: uploadedPortfolioFile });
+	const driveSync = await uploadFilesToGoogleDrive(env, candidateName, uploads);
 	const portfolioUrl = safeString(form.get("portfolio_url"));
 	const hasPortfolio = Boolean(portfolioUrl || uploadedPortfolioFile || driveSync.portfolio?.webViewLink);
 	const hasResume = Boolean(resumeFile || driveSync.resume?.webViewLink);
@@ -420,9 +525,19 @@ async function createCandidate(request: Request, env: Env): Promise<Response> {
 		trialAssignment,
 	).run();
 
+	const candidateId = Number(result.meta.last_row_id);
+	for (const upload of uploads) {
+		const driveUrl = upload.kind === "resume" ? driveSync.resume?.webViewLink ?? "" : driveSync.portfolio?.webViewLink ?? "";
+		await env.DB.prepare(`
+			INSERT INTO intern_files (candidate_id, file_kind, file_name, content_type, file_size, base64_data, google_drive_url)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`).bind(candidateId, upload.kind, upload.fileName, upload.contentType, upload.size, upload.data, driveUrl).run();
+	}
+
 	await env.DB.prepare("INSERT INTO intern_activity_log (candidate_id, action, details) VALUES (?, 'Candidate submitted intake form', ?)")
-		.bind(result.meta.last_row_id, driveSync.resume || driveSync.portfolio ? "Files synced to Google Drive." : "Stored candidate details in D1.")
+		.bind(candidateId, driveSync.resume || driveSync.portfolio ? "Stored candidate details/files in Cloudflare D1 and synced files to Google Drive." : "Stored candidate details and uploaded files in Cloudflare D1.")
 		.run();
+	await notifyIntakeWebhook(env, { id: candidateId, candidateName, desiredRole, email: safeString(form.get("email")) });
 
 	return htmlResponse(renderSuccess(candidateName, driveSync));
 }
@@ -508,6 +623,100 @@ async function importCandidates(request: Request, env: Env): Promise<Response> {
 	return redirect(`/admin${getAdminQuery(request)}`);
 }
 
+async function saveIntegrationSettings(request: Request, env: Env): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const settings = [
+		["google_drive_webhook_url", safeString(form.get("google_drive_webhook_url"))],
+		["notification_webhook_url", safeString(form.get("notification_webhook_url"))],
+	];
+	const googleSecret = safeString(form.get("google_drive_shared_secret"));
+	if (googleSecret) {
+		settings.push(["google_drive_shared_secret", googleSecret]);
+	}
+	const inboundSecret = safeString(form.get("inbound_webhook_secret"));
+	if (inboundSecret) {
+		settings.push(["inbound_webhook_secret", inboundSecret]);
+	}
+	await env.DB.batch(settings.map(([key, value]) => env.DB.prepare(`
+		INSERT INTO integration_settings (setting_key, setting_value, updated_at)
+		VALUES (?, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP
+	`).bind(key, value)));
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('admin', 'settings', 'integration_settings.updated', 'success', ?)")
+		.bind(JSON.stringify({ updated: settings.map(([key]) => key) }))
+		.run();
+	return redirect(`/portal${getAdminQuery(request)}`);
+}
+
+async function downloadCloudflareFile(request: Request, env: Env, fileId: number): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const file = await env.DB.prepare("SELECT file_name, content_type, base64_data FROM intern_files WHERE id = ?").bind(fileId).first<{ file_name: string; content_type: string; base64_data: string }>();
+	if (!file) {
+		return htmlResponse("<h1>File not found</h1>", { status: 404 });
+	}
+	return new Response(base64ToBytes(file.base64_data), {
+		headers: {
+			"content-type": file.content_type,
+			"content-disposition": `attachment; filename="${file.file_name.replaceAll('"', '')}"`,
+		},
+	});
+}
+
+async function handleGoogleDriveWebhook(request: Request, env: Env): Promise<Response> {
+	await ensureInternTables(env);
+	const payload = await request.json<Record<string, unknown>>();
+	const configuredSecret = await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET");
+	const suppliedSecret = request.headers.get("x-1sv-webhook-secret") ?? String(payload.sharedSecret ?? "");
+	if (configuredSecret && suppliedSecret !== configuredSecret) {
+		await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('inbound', 'google_drive', 'drive_callback', 'unauthorized', ?)")
+			.bind(JSON.stringify({ payload }))
+			.run();
+		return jsonResponse({ ok: false, error: "Unauthorized" }, { status: 401 });
+	}
+	const candidateId = Number(payload.candidateId ?? 0);
+	const candidateName = String(payload.candidateName ?? "").trim();
+	const kind = String(payload.kind ?? payload.fileKind ?? "").trim();
+	const fileName = String(payload.fileName ?? "").trim();
+	const webViewLink = String(payload.webViewLink ?? payload.googleDriveUrl ?? "").trim();
+	if (!webViewLink || (!candidateId && !candidateName)) {
+		return jsonResponse({ ok: false, error: "candidateId or candidateName plus webViewLink is required" }, { status: 400 });
+	}
+	if (candidateId) {
+		await env.DB.prepare("UPDATE intern_files SET google_drive_url = ? WHERE candidate_id = ? AND (? = '' OR file_kind = ?) AND (? = '' OR file_name = ?)")
+			.bind(webViewLink, candidateId, kind, kind, fileName, fileName)
+			.run();
+		if (kind === "resume") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_resume_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(webViewLink, candidateId).run();
+		}
+		if (kind === "portfolio") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_portfolio_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(webViewLink, candidateId).run();
+		}
+	} else {
+		await env.DB.prepare("UPDATE intern_files SET google_drive_url = ? WHERE candidate_id IN (SELECT id FROM intern_candidates WHERE candidate_name = ?) AND (? = '' OR file_kind = ?)")
+			.bind(webViewLink, candidateName, kind, kind)
+			.run();
+		if (kind === "resume") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_resume_url = ?, updated_at = CURRENT_TIMESTAMP WHERE candidate_name = ?").bind(webViewLink, candidateName).run();
+		}
+		if (kind === "portfolio") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_portfolio_url = ?, updated_at = CURRENT_TIMESTAMP WHERE candidate_name = ?").bind(webViewLink, candidateName).run();
+		}
+	}
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('inbound', 'google_drive', 'drive_callback', 'success', ?)")
+		.bind(JSON.stringify(payload))
+		.run();
+	return jsonResponse({ ok: true, savedIn: getStorageLabel() });
+}
+
 async function handleRequest(request: Request, env: Env): Promise<Response> {
 	const url = new URL(request.url);
 
@@ -524,7 +733,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 		if (unauthorized) {
 			return unauthorized;
 		}
-		return htmlResponse(renderAdmin(await listCandidates(env), await getStats(env), STATUS_OPTIONS, getAdminQuery(request)));
+		return htmlResponse(renderAdmin(await listCandidates(env), await getStats(env), STATUS_OPTIONS, getAdminQuery(request), await getIntegrationSettings(env)));
 	}
 
 	if (request.method === "POST" && url.pathname === "/admin/update") {
@@ -533,6 +742,19 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
 	if (request.method === "POST" && url.pathname === "/admin/import") {
 		return importCandidates(request, env);
+	}
+
+	if (request.method === "POST" && url.pathname === "/admin/integrations") {
+		return saveIntegrationSettings(request, env);
+	}
+
+	if (request.method === "GET" && url.pathname.startsWith("/admin/files/")) {
+		const fileId = Number(url.pathname.split("/").pop());
+		return downloadCloudflareFile(request, env, fileId);
+	}
+
+	if (request.method === "POST" && url.pathname === "/webhooks/google-drive") {
+		return handleGoogleDriveWebhook(request, env);
 	}
 
 	if (request.method === "GET" && url.pathname === "/api/candidates") {

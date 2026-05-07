@@ -18,6 +18,7 @@ type InternCandidateView = {
 	created_at: string;
 	updated_at: string;
 	last_contacted_at: string | null;
+	cloudflare_files?: string;
 };
 
 type DashboardStatsView = {
@@ -27,6 +28,16 @@ type DashboardStatsView = {
 	interviewsScheduled: number;
 	accepted: number;
 	googleDriveConnected: boolean;
+	cloudflareFiles: number;
+	webhookEvents: number;
+};
+
+type IntegrationSettingsView = {
+	googleDriveWebhookUrl: string;
+	googleDriveSharedSecretConfigured: boolean;
+	notificationWebhookUrl: string;
+	notificationWebhookConfigured: boolean;
+	inboundWebhookSecretConfigured: boolean;
 };
 
 type DriveSyncResultView = {
@@ -170,6 +181,21 @@ function formAttr(formId: string): string {
 	return ` form="${formId}"`;
 }
 
+function cloudflareFileLinks(candidate: InternCandidateView, kind: string, adminQuery: string): string {
+	return (candidate.cloudflare_files ?? "")
+		.split("||")
+		.filter(Boolean)
+		.map((file) => {
+			const [id, fileKind, fileName] = file.split("::");
+			if (fileKind !== kind) {
+				return "";
+			}
+			return `<a href="/admin/files/${escapeHtml(id)}${escapeHtml(adminQuery)}">Cloudflare file: ${escapeHtml(fileName)}</a>`;
+		})
+		.filter(Boolean)
+		.join("<br>");
+}
+
 function candidateRow(candidate: InternCandidateView, statusOptions: readonly string[], adminQuery: string): string {
 	const formId = `candidate-${candidate.id}`;
 	const attr = formAttr(formId);
@@ -177,8 +203,8 @@ function candidateRow(candidate: InternCandidateView, statusOptions: readonly st
 	<td><strong>${escapeHtml(candidate.candidate_name)}</strong><br><span class="badge ${candidate.priority_level === "Highest" ? "highest" : ""}">${escapeHtml(candidate.priority_level)}</span><p class="small">Created: ${escapeHtml(candidate.created_at)}<br>Updated: ${escapeHtml(candidate.updated_at)}</p></td>
 	<td><label>Email<input${attr} name="email" value="${escapeHtml(candidate.email)}" /></label><label>Phone<input${attr} name="phone" value="${escapeHtml(candidate.phone)}" /></label></td>
 	<td><label>Role<input${attr} name="desired_role" value="${escapeHtml(candidate.desired_role)}" /></label><label>Availability<textarea${attr} name="weekly_availability">${escapeHtml(candidate.weekly_availability)}</textarea></label></td>
-	<td><label>Resume<select${attr} name="resume_received"><option ${candidate.resume_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.resume_received !== "Yes" ? "selected" : ""}>No</option></select></label>${candidate.google_drive_resume_url ? `<a href="${escapeHtml(candidate.google_drive_resume_url)}" target="_blank" rel="noreferrer">Drive resume</a>` : ""}</td>
-	<td><label>Portfolio<select${attr} name="portfolio_received"><option ${candidate.portfolio_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.portfolio_received !== "Yes" ? "selected" : ""}>No</option></select></label><label>Portfolio URL<textarea${attr} name="portfolio_url">${escapeHtml(candidate.portfolio_url)}</textarea></label>${candidate.google_drive_portfolio_url ? `<a href="${escapeHtml(candidate.google_drive_portfolio_url)}" target="_blank" rel="noreferrer">Drive portfolio</a>` : ""}</td>
+	<td><label>Resume<select${attr} name="resume_received"><option ${candidate.resume_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.resume_received !== "Yes" ? "selected" : ""}>No</option></select></label>${cloudflareFileLinks(candidate, "resume", adminQuery)}${candidate.google_drive_resume_url ? `<br><a href="${escapeHtml(candidate.google_drive_resume_url)}" target="_blank" rel="noreferrer">Drive resume</a>` : ""}</td>
+	<td><label>Portfolio<select${attr} name="portfolio_received"><option ${candidate.portfolio_received === "Yes" ? "selected" : ""}>Yes</option><option ${candidate.portfolio_received !== "Yes" ? "selected" : ""}>No</option></select></label><label>Portfolio URL<textarea${attr} name="portfolio_url">${escapeHtml(candidate.portfolio_url)}</textarea></label>${cloudflareFileLinks(candidate, "portfolio", adminQuery)}${candidate.google_drive_portfolio_url ? `<br><a href="${escapeHtml(candidate.google_drive_portfolio_url)}" target="_blank" rel="noreferrer">Drive portfolio</a>` : ""}</td>
 	<td><label>Status<select${attr} name="interview_status">${optionTags(statusOptions, candidate.interview_status)}</select></label><label>Final Placement<input${attr} name="final_placement" value="${escapeHtml(candidate.final_placement)}" /></label></td>
 	<td><label>Trial Assignment<textarea${attr} name="trial_assignment">${escapeHtml(candidate.trial_assignment)}</textarea></label><label>Notes<textarea${attr} name="notes">${escapeHtml(candidate.notes)}</textarea></label></td>
 	<td><form id="${formId}" method="post" action="/admin/update${escapeHtml(adminQuery)}"><input type="hidden" name="id" value="${candidate.id}" /><label>Priority<input name="priority_level" value="${escapeHtml(candidate.priority_level)}" /></label><label>Last Contacted<input type="date" name="last_contacted_at" value="${escapeHtml(candidate.last_contacted_at)}" /></label><button type="submit">Save</button></form></td>
@@ -199,7 +225,7 @@ export function renderAdminLogin(hasTokenConfigured: boolean): string {
 </main>`);
 }
 
-export function renderAdmin(candidates: InternCandidateView[], stats: DashboardStatsView, statusOptions: readonly string[], adminQuery: string): string {
+export function renderAdmin(candidates: InternCandidateView[], stats: DashboardStatsView, statusOptions: readonly string[], adminQuery: string, integrations: IntegrationSettingsView): string {
 	return page("1SV Intern Admin Tracker", `
 <header class="hero">
 	<p class="badge">Admin tracker • Assigned to Rere • Support by Brittany / BB Management</p>
@@ -210,8 +236,8 @@ export function renderAdmin(candidates: InternCandidateView[], stats: DashboardS
 	<section class="card storage">
 		<h2>Saved Data Location</h2>
 		<div class="grid">
-			<div><h3>Candidate tracker</h3><p class="small">Saved in Cloudflare D1 database binding <code>DB</code>, table <code>intern_candidates</code>. Activity history is saved in <code>intern_activity_log</code>.</p></div>
-			<div><h3>Uploaded files</h3><p class="small">Saved in Google Drive folder <code>1 Soundvibe Studios Intern Intake</code> only when Drive sync is connected. Resume/portfolio Drive URLs appear in each candidate row.</p></div>
+			<div><h3>Candidate tracker</h3><p class="small">Saved in Cloudflare D1 database binding <code>DB</code>, table <code>intern_candidates</code>. Uploaded files are saved in <code>intern_files</code>. Activity history is saved in <code>intern_activity_log</code>.</p></div>
+			<div><h3>Uploaded files</h3><p class="small">Always saved first in Cloudflare D1 table <code>intern_files</code>. Also copied to Google Drive folder <code>1 Soundvibe Studios Intern Intake</code> when Drive sync is connected.</p></div>
 			<div><h3>Admin portal URL</h3><p class="small">Use <code>/portal</code> or <code>/admin</code> with your admin token to view and manage everything.</p></div>
 		</div>
 		<div class="actions"><a class="button" href="/">Public Intake Form</a><a class="button secondary" href="/export.csv${escapeHtml(adminQuery)}">Export CSV for Google Sheets</a><a class="button light" href="/google-drive-setup${escapeHtml(adminQuery)}">Google Drive Setup</a><a class="button light" href="/api/candidates${escapeHtml(adminQuery)}">JSON API</a></div>
@@ -223,7 +249,24 @@ export function renderAdmin(candidates: InternCandidateView[], stats: DashboardS
 		<div class="stat"><span>Interviews Scheduled</span><strong>${stats.interviewsScheduled}</strong></div>
 		<div class="stat"><span>Accepted / Placed</span><strong>${stats.accepted}</strong></div>
 		<div class="stat"><span>Google Drive</span><strong>${stats.googleDriveConnected ? "Connected" : "Setup Needed"}</strong></div>
+		<div class="stat"><span>Cloudflare Files</span><strong>${stats.cloudflareFiles}</strong></div>
+		<div class="stat"><span>Webhook Events</span><strong>${stats.webhookEvents}</strong></div>
 	</section>
+	<section class="card">
+		<h2>Webhook & Google Drive Connections</h2>
+		<p class="small">Use this admin portal to connect Google Drive and any notification automation without editing code. Values are saved in Cloudflare D1 table <code>integration_settings</code>.</p>
+		<form method="post" action="/admin/integrations${escapeHtml(adminQuery)}">
+			<div class="grid">
+				<label>Google Apps Script Webhook URL<input name="google_drive_webhook_url" value="${escapeHtml(integrations.googleDriveWebhookUrl)}" placeholder="https://script.google.com/macros/s/.../exec" /></label>
+				<label>Google Shared Secret<input name="google_drive_shared_secret" type="password" placeholder="${integrations.googleDriveSharedSecretConfigured ? "Saved — enter a new value to replace" : "Create a long private secret"}" /></label>
+				<label>New Intake Notification Webhook<input name="notification_webhook_url" value="${escapeHtml(integrations.notificationWebhookUrl)}" placeholder="Zapier/Make/Slack/CRM webhook URL" /></label>
+				<label>Inbound / Notification Secret<input name="inbound_webhook_secret" type="password" placeholder="${integrations.inboundWebhookSecretConfigured ? "Saved — enter a new value to replace" : "Secret for callbacks and notifications"}" /></label>
+			</div>
+			<div class="actions"><button type="submit">Save Webhook Connections</button><a class="button light" href="/google-drive-setup${escapeHtml(adminQuery)}">Open Google Setup</a></div>
+		</form>
+		<p class="small">Inbound Google callback endpoint: <code>/webhooks/google-drive</code>. Downloaded Cloudflare files stay protected behind the admin token.</p>
+	</section>
+
 	<section class="card">
 		<h2>Import Current Candidate List</h2>
 		<p class="small">Paste the current list here so Rere can start the process without showing names on the public intake form. Use either <code>Name — Role</code> or CSV columns: <code>Name, Email, Role, Resume Received, Portfolio Received, Status, Notes</code>.</p>
@@ -265,6 +308,7 @@ Next week’s priority:</pre>
 export function renderDriveSetup(): string {
 	const appsScript = `const SHARED_SECRET = 'CHANGE_ME_TO_A_LONG_SECRET';
 const ROOT_FOLDER_NAME = '1 Soundvibe Studios Intern Intake';
+const CLOUDFLARE_CALLBACK_URL = 'https://YOUR-WORKER-DOMAIN/webhooks/google-drive';
 
 function doPost(e) {
   const payload = JSON.parse(e.postData.contents);
@@ -280,7 +324,14 @@ function doPost(e) {
     const bytes = Utilities.base64Decode(upload.data);
     const blob = Utilities.newBlob(bytes, upload.contentType, upload.fileName);
     const file = candidateFolder.createFile(blob);
-    response[upload.kind] = { fileName: file.getName(), webViewLink: file.getUrl() };
+    const saved = { fileName: file.getName(), webViewLink: file.getUrl() };
+    response[upload.kind] = saved;
+    UrlFetchApp.fetch(CLOUDFLARE_CALLBACK_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { 'x-1sv-webhook-secret': SHARED_SECRET },
+      payload: JSON.stringify({ candidateName: payload.candidateName, kind: upload.kind, fileName: upload.fileName, webViewLink: saved.webViewLink })
+    });
   });
 
   return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
@@ -301,7 +352,7 @@ function getOrCreateFolder(name, parent) {
 			<li>Create a new project and paste the script below.</li>
 			<li>Change <code>SHARED_SECRET</code> to a long private value.</li>
 			<li>Deploy as a web app with access limited to yourself or your organization, then copy the web app URL.</li>
-			<li>Add Worker secrets: <code>GOOGLE_DRIVE_WEBHOOK_URL</code>, <code>GOOGLE_DRIVE_SHARED_SECRET</code>, and optionally <code>ADMIN_TOKEN</code>.</li>
+			<li>Paste the deployed Apps Script URL and shared secret into the Admin Portal webhook form. You can still use Worker secrets <code>GOOGLE_DRIVE_WEBHOOK_URL</code> and <code>GOOGLE_DRIVE_SHARED_SECRET</code> if preferred.</li>
 		</ol>
 		<pre class="script">${escapeHtml(appsScript)}</pre>
 	</section>
@@ -310,7 +361,7 @@ function getOrCreateFolder(name, parent) {
 		<pre class="script">npx wrangler secret put GOOGLE_DRIVE_WEBHOOK_URL
 npx wrangler secret put GOOGLE_DRIVE_SHARED_SECRET
 npx wrangler secret put ADMIN_TOKEN</pre>
-		<p class="small">After this is configured, uploaded resumes and portfolio files will be copied into candidate-specific folders in Google Drive. The tracker keeps the returned Drive links.</p>
+		<p class="small">After this is configured, uploaded resumes and portfolio files are saved in Cloudflare D1 first, copied into candidate-specific folders in Google Drive, and callback events are logged in Cloudflare.</p>
 	</section>
 </main>`);
 }
