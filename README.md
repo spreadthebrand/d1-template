@@ -1,59 +1,78 @@
-# Worker + D1 Database
+# The Girls Room Creative Lock In — Cloudflare Worker
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+This project is a one-page Cloudflare Worker website for **The Girls Room Creative Lock In**. It includes an elegant event landing page, an active invite request form, upload support, sponsorship interest questions, required media-release consent, D1 database storage, and Freeform forwarding.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+## What the form does
 
-<!-- dash-content-start -->
+When a visitor submits the form, the Worker:
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+1. Validates required fields: name, email, creative lane, and media release consent.
+2. Saves the request to the `creative_lock_in_submissions` D1 table.
+3. Forwards the submission and attached upload to your configured Freeform endpoint.
+4. Shows a custom thank-you message instead of crashing if Freeform is unavailable or not connected yet.
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+## Freeform setup
+
+To see requests inside your Freeform dashboard, copy the endpoint URL from the form you created in Freeform and add it to the Worker as a secret:
+
+```bash
+npx wrangler secret put FREEFORM_ENDPOINT
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Paste the full endpoint URL from Freeform when Wrangler prompts for the secret value.
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+The Worker also accepts `FORM_PROVIDER_ENDPOINT` as a generic backup name, but `FREEFORM_ENDPOINT` is preferred for this project.
+
+Optional organizer email override:
+
+```bash
+npx wrangler secret put SUBMISSION_EMAIL
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+If `FREEFORM_ENDPOINT` and `FORM_PROVIDER_ENDPOINT` are both missing, the Worker still saves submissions to D1, but it cannot send them to Freeform.
 
-<!-- dash-content-end -->
+## Uploads and attachments
 
-## Getting Started
+The form accepts image and PDF uploads. The Worker forwards the uploaded file to Freeform as the `upload` field and also stores the file name in D1.
 
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
+Freeform file uploads may require a dashboard endpoint and a plan that supports file uploads. If your Freeform plan or endpoint does not support uploads, submissions may arrive without attachments even though the D1 record still includes the uploaded file name.
 
+To permanently store full uploaded files yourself, add Cloudflare R2 and save the file there before forwarding the form.
+
+## Local development
+
+Install dependencies:
+
+```bash
+npm install
 ```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+
+Apply local D1 migrations:
+
+```bash
+npm run seedLocalD1
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+Run the Worker locally:
 
-## Setup Steps
+```bash
+npx wrangler dev --ip 127.0.0.1 --port 8787
+```
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+Open <http://127.0.0.1:8787>.
+
+## Checks
+
+```bash
+npm run check
+```
+
+## Deployment
+
+The deploy script applies remote migrations first and then deploys the Worker:
+
+```bash
+npm run deploy
+```
+
+If the live site ever shows a Cloudflare Worker error after a form submission, check that remote D1 migrations have been applied and that your Freeform endpoint is configured correctly.
