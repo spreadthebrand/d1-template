@@ -447,7 +447,7 @@ export function renderHtml(submission?: SubmissionView) {
 			</section>
 
 			<aside class="card form-card" id="apply">
-				${submission ? `<div class="notice"><strong>Thank you${submittedName ? `, ${submittedName}` : ""}!</strong><br />Your request has been received. We logged ${submittedEmail || "your email"}, role: ${submittedRole || "creative"}, upload: ${submittedFile}, sponsorship: ${sponsorshipInterest}, media consent: ${mediaConsent}.</div>` : ""}
+				${submission ? `<div class="notice"><strong>Thank you${submittedName ? `, ${submittedName}` : ""}!</strong><br />Your request has been received and emailed to Freegame Productions. We logged ${submittedEmail || "your email"}, role: ${submittedRole || "creative"}, upload: ${submittedFile}, sponsorship: ${sponsorshipInterest}, media consent: ${mediaConsent}.</div>` : ""}
 				<h2>Request your invitation</h2>
 				<p>Tell us who you are, upload a sample or flyer, and let us know if you or your brand would like to support the room.</p>
 
@@ -517,7 +517,7 @@ export function renderHtml(submission?: SubmissionView) {
 
 					<button class="button" type="submit">Submit request</button>
 				</form>
-				<p class="footer-note">Freegame Productions will review submissions and follow up with invitation and sponsorship details.</p>
+				<p class="footer-note">Freegame Productions will receive each active form submission at freegameproductions@gmail.com, review requests, and follow up with invitation and sponsorship details.</p>
 			</aside>
 		</main>
 	</div>

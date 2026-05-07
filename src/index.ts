@@ -1,5 +1,8 @@
 import { renderHtml, type SubmissionView } from "./renderHtml";
 
+const FLOWFORM_ENDPOINT = "https://flowform.to/submit";
+const SUBMISSION_EMAIL = "freegameproductions@gmail.com";
+
 const textValue = (formData: FormData, key: string) => {
 	const value = formData.get(key);
 	return typeof value === "string" ? value.trim() : "";
@@ -9,6 +12,31 @@ const fileNameFromForm = (formData: FormData) => {
 	const value = formData.get("upload");
 	return value instanceof File && value.name ? value.name : "";
 };
+
+async function sendSubmissionEmail(formData: FormData, uploadFileName: string) {
+	const emailFormData = new FormData();
+	emailFormData.append("_to", SUBMISSION_EMAIL);
+	emailFormData.append("_subject", "New Creative Lock In invite request");
+	emailFormData.append("event", "The Girls Room Creative Lock In");
+	emailFormData.append("upload_file_name", uploadFileName || "No file attached");
+
+	for (const [key, value] of formData.entries()) {
+		if (typeof value === "string") {
+			emailFormData.append(key, value);
+		} else {
+			emailFormData.append(key, value, value.name);
+		}
+	}
+
+	const response = await fetch(FLOWFORM_ENDPOINT, {
+		method: "POST",
+		body: emailFormData,
+	});
+
+	if (!response.ok) {
+		throw new Error(`FlowForm email delivery failed with status ${response.status}`);
+	}
+}
 
 async function handleSubmission(request: Request, env: Env) {
 	const formData = await request.formData();
@@ -51,6 +79,8 @@ async function handleSubmission(request: Request, env: Env) {
 			textValue(formData, "sponsorLevel"),
 		)
 		.run();
+
+	await sendSubmissionEmail(formData, uploadFileName);
 
 	return new Response(renderHtml(submission), {
 		headers: {
