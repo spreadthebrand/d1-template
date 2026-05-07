@@ -1,0 +1,1 @@
+export function AnalyticsCards({ stats }: { stats: Record<string, number | string> }) { return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(stats).map(([k,v]) => <div key={k} className="card"><p className="text-sm capitalize text-slate-400">{k.replaceAll("_"," ")}</p><p className="mt-2 text-4xl font-black text-gold">{v}</p></div>)}</div>; }

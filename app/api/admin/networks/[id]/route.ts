@@ -1,0 +1,2 @@
+import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth";
+export async function PATCH(req:Request,{params}:{params:{id:string}}){ const auth=await requireRole('admin'); if(auth.error) return auth.error; const body=await req.json(); const item=await (prisma as any).network.update({ where:{id:params.id}, data:body }); return NextResponse.json(item); }

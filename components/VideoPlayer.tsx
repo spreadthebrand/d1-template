@@ -1,0 +1,2 @@
+import { embedUrl, isDirectVideo } from "@/lib/utils";
+export function VideoPlayer({ url, title }: { url: string; title: string }) { if (isDirectVideo(url)) return <video className="aspect-video w-full rounded-3xl bg-black" src={url} controls preload="metadata" />; return <iframe className="aspect-video w-full rounded-3xl bg-black" src={embedUrl(url)} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />; }

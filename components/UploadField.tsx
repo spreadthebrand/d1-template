@@ -1,0 +1,2 @@
+"use client";
+export function UploadField({ name, label }: { name: string; label: string }) { return <label className="block"><span className="label">{label}</span><input name={name} type="file" accept="video/mp4,video/webm,image/png,image/jpeg,image/webp" className="input mt-2 file:mr-4 file:rounded-full file:border-0 file:bg-electric file:px-4 file:py-2 file:text-white"/><p className="mt-2 text-xs text-slate-500">Local MVP accepts MP4/WebM video and PNG/JPEG/WebP images. Cloud storage can be added later.</p></label>; }

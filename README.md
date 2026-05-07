@@ -1,59 +1,169 @@
-# Worker + D1 Database
+# CCB Network — Connect, Create, & Build
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+CCB Network is an original full-stack streaming-network launch platform for creators, churches, podcasters, educators, indie filmmakers, brands, and community organizations. It starts as a free/low-cost web distribution MVP and is structured to scale later into cloud storage, payments, email, Roku, Fire TV, Apple TV, Android TV, mobile apps, FAST, IPTV, and subscriptions.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+> The MVP intentionally does **not** claim instant publishing to Roku, Fire TV, Apple TV, or other third-party platforms. Connected-TV distribution is a roadmap phase that can require developer accounts, platform approval, app builds, compliance, technical packaging, and fees.
 
-<!-- dash-content-start -->
+## Stack
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- PostgreSQL
+- Prisma ORM
+- NextAuth credentials authentication
+- Zod validation
+- React Hook Form
+- Local-first upload/storage structure with S3-compatible placeholders
+- Stripe-ready placeholders
+- REST API routes
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+## Local setup
+
+1. Install dependencies:
+
+```bash
+npm install
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+2. Copy environment variables:
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+```bash
+cp .env.example .env
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+3. Set required local values in `.env`:
 
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/ccb_network?schema=public"
+NEXTAUTH_SECRET="generate-a-long-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+ADMIN_EMAIL="admin@ccbnetwork.local"
+ADMIN_PASSWORD="ChangeMe123!"
+STORAGE_PROVIDER="local"
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+4. Run Prisma migrations:
 
-## Setup Steps
+```bash
+npx prisma migrate dev --name init
+```
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+5. Seed the database:
+
+```bash
+npm run prisma:seed
+```
+
+6. Start the dev server:
+
+```bash
+npm run dev
+```
+
+Open <http://localhost:3000>.
+
+## Default logins
+
+- Admin: `admin@ccbnetwork.local` / `ChangeMe123!` (or values from `ADMIN_EMAIL` and `ADMIN_PASSWORD`)
+- Creators: `creator1@ccbnetwork.local`, `creator2@ccbnetwork.local`, `creator3@ccbnetwork.local` / `Creator123!`
+
+Change all seeded passwords before any public deployment.
+
+## Main routes
+
+### Public pages
+
+- `/` homepage
+- `/about`
+- `/start`
+- `/distribution`
+- `/pricing`
+- `/apply`
+- `/networks`
+- `/networks/[slug]`
+- `/watch`
+- `/watch/[slug]`
+- `/resources`
+- `/resources/[slug]`
+- `/contact`
+- `/privacy`
+- `/terms`
+- `/content-rights`
+- `/admin/login`
+
+### Creator
+
+- `/dashboard`
+- `/api/upload` (authenticated local MVP uploads)
+- `/api/dashboard`
+- `/api/creator/profile`
+- `/api/creator/networks`
+- `/api/creator/networks/:id`
+- `/api/creator/videos`
+- `/api/creator/videos/:id`
+- `/api/creator/checklist/:networkId`
+
+### Admin
+
+- `/admin`
+- `/admin/applications`
+- `/admin/networks`
+- `/admin/videos`
+- `/admin/users`
+- `/admin/pricing`
+- `/admin/leads`
+- `/admin/resources`
+- `/admin/settings`
+- `/admin/analytics`
+
+Protected admin APIs include applications, networks, videos, leads, analytics, resources, and settings.
+
+## Storage roadmap
+
+The MVP supports free local development and video links from YouTube, Vimeo, or direct MP4/WebM URLs. `services/storage.ts` centralizes storage decisions. To switch to cloud storage later:
+
+1. Set `STORAGE_PROVIDER=s3` or a provider label such as `r2`/`bunny`.
+2. Fill in `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET`, and `S3_REGION`.
+3. Replace the local upload placeholder with signed upload URLs and server-side validation.
+4. Keep the existing file type restrictions for videos and images.
+
+## Stripe roadmap
+
+Payments are disabled in MVP. To enable Stripe later:
+
+1. Create Stripe products/prices for Builder, Network Pro, and Enterprise deposits/subscriptions.
+2. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+3. Implement checkout sessions in `services/stripe.ts`.
+4. Add webhook handling for subscription status and billing events.
+
+## TV app distribution roadmap
+
+Placeholder service files document the requirements for future integrations:
+
+- `services/roku.ts`
+- `services/firetv.ts`
+- `services/appletv.ts`
+- `services/androidtv.ts`
+
+Each future platform can require developer accounts, branding assets, metadata, privacy and terms URLs, app builds, QA devices, technical review, content compliance, and fees.
+
+## Security notes
+
+- NextAuth credentials authentication with bcrypt password hashes.
+- Role-based route protection for admin and creator areas.
+- Zod validation on form and API inputs.
+- Basic in-memory rate limiting on application/contact forms.
+- Honeypot spam fields on public forms.
+- Hashed IP/user-agent values for view logs.
+- Optional environment variables for paid providers.
+- No hardcoded production secrets.
+
+## Quality checks
+
+```bash
+npm run typecheck
+npm run build
+```
+
+Run these after changing schema, routes, or UI components.

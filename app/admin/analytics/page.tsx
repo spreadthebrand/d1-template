@@ -1,0 +1,4 @@
+export const dynamic = "force-dynamic";
+import { AdminShell } from "@/components/AdminShell";
+import { prisma } from "@/lib/prisma"; import { AnalyticsCards } from "@/components/AnalyticsCards";
+export default async function Analytics(){ const [views,counted,featuredVideos,featuredNetworks]=await Promise.all([prisma.viewLog.count(),prisma.viewLog.count({where:{counted:true}}),prisma.video.count({where:{isFeatured:true}}),prisma.network.count({where:{isFeatured:true}})]); return <AdminShell><><h1 className="text-4xl font-black">Analytics</h1><p className="mt-3 text-slate-400">Basic MVP analytics use hashed visitor fields and counted view logs.</p><div className="mt-8"><AnalyticsCards stats={{ views, counted_views:counted, featured_videos:featuredVideos, featured_networks:featuredNetworks }}/></div></></AdminShell> }
