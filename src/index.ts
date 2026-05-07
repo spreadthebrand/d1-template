@@ -519,7 +519,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 		return createCandidate(request, env);
 	}
 
-	if (request.method === "GET" && url.pathname === "/admin") {
+	if (request.method === "GET" && (url.pathname === "/admin" || url.pathname === "/portal")) {
 		const unauthorized = requireAdmin(request, env);
 		if (unauthorized) {
 			return unauthorized;
@@ -557,6 +557,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 	}
 
 	if (request.method === "GET" && url.pathname === "/google-drive-setup") {
+		const unauthorized = requireAdmin(request, env);
+		if (unauthorized) {
+			return unauthorized;
+		}
 		return htmlResponse(renderDriveSetup());
 	}
 

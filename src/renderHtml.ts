@@ -57,6 +57,7 @@ function page(title: string, body: string): string {
 		a { color: var(--brand); font-weight: 700; }
 		header.hero { padding: 56px 7vw; color: white; background: radial-gradient(circle at top left, #f59e0b, transparent 28rem), linear-gradient(135deg, #111827, #4c1d95 58%, #7c2d12); }
 		header.hero p { max-width: 760px; color: #f8fafc; font-size: 1.08rem; line-height: 1.7; }
+		.hero-top { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 22px; }
 		h1 { margin: 0 0 12px; font-size: clamp(2rem, 5vw, 4.6rem); letter-spacing: -0.06em; line-height: 0.95; }
 		h2 { margin-top: 0; font-size: clamp(1.35rem, 3vw, 2.2rem); letter-spacing: -0.03em; }
 		h3 { margin-bottom: 8px; }
@@ -81,6 +82,7 @@ function page(title: string, body: string): string {
 		.small { color: var(--muted); font-size: 0.86rem; line-height: 1.5; }
 		.script { white-space: pre-wrap; background: #111827; color: #f8fafc; padding: 18px; border-radius: 16px; overflow-x: auto; }
 		.notice { border-left: 5px solid var(--gold); background: #fffbeb; padding: 16px; border-radius: 14px; }
+		.storage { border-left: 5px solid var(--brand); background: #f5f3ff; padding: 16px; border-radius: 14px; }
 		@media (max-width: 720px) { header.hero { padding: 36px 5vw; } main { width: 94vw; } .card { padding: 18px; } }
 	</style>
 </head>
@@ -108,11 +110,17 @@ function roleSelect(name: string, selected = ""): string {
 export function renderIntakeForm(): string {
 	return page("1 Soundvibe Studios Intern Intake", `
 <header class="hero">
-	<p class="badge">1 Soundvibe Studios • Intern Intake</p>
+	<div class="hero-top"><p class="badge">1 Soundvibe Studios • Intern Intake</p><a class="button light" href="/portal">Admin Portal</a></div>
 	<h1>Intern Intake System</h1>
-	<p>Apply for studio operations, marketing, photography/content, graphic design, A&amp;R, music production, or event/media support. Your details are saved to the intern tracker and files can sync to the studio Google Drive when the Drive webhook is configured.</p>
+	<p>Apply for studio operations, marketing, photography/content, graphic design, A&amp;R, music production, or event/media support. Submissions are saved in the Cloudflare D1 tracker database; uploaded files are sent to the studio Google Drive when Drive sync is connected.</p>
 </header>
 <main>
+	<section class="card storage">
+		<h2>Where submissions are saved</h2>
+		<p><strong>Candidate details:</strong> saved in Cloudflare D1 table <code>intern_candidates</code> through the <code>DB</code> binding.</p>
+		<p><strong>Resumes / portfolio files:</strong> sent to the Google Drive folder <code>1 Soundvibe Studios Intern Intake</code> only after <code>GOOGLE_DRIVE_WEBHOOK_URL</code> is configured. The tracker stores the Drive links.</p>
+		<p><strong>Admin portal:</strong> open <a href="/portal">/portal</a> or <a href="/admin">/admin</a> and enter the admin token.</p>
+	</section>
 	<section class="card">
 		<h2>Candidate Intake Form</h2>
 		<form method="post" action="/intake" enctype="multipart/form-data">
@@ -147,11 +155,11 @@ export function renderIntakeForm(): string {
 
 export function renderSuccess(candidateName: string, driveSync: DriveSyncResultView): string {
 	const driveMessage = driveSync.resume || driveSync.portfolio
-		? `<p class="notice">Google Drive sync completed for uploaded file(s).</p>`
-		: `<p class="notice">Submission saved. Google Drive file sync will activate after <code>GOOGLE_DRIVE_WEBHOOK_URL</code> is configured.</p>`;
+		? `<p class="notice"><strong>Saved:</strong> Candidate details are in Cloudflare D1, and uploaded file(s) were copied to Google Drive.</p>`
+		: `<p class="notice"><strong>Saved:</strong> Candidate details are in Cloudflare D1 table <code>intern_candidates</code>. File uploads require <code>GOOGLE_DRIVE_WEBHOOK_URL</code>; until Drive sync is connected, the tracker stores candidate details and external portfolio links only.</p>`;
 	return page("Intern Intake Submitted", `
 <header class="hero"><h1>Submission Received</h1><p>Thank you, ${escapeHtml(candidateName)}. Rere will review your intake details and follow up about interviews/orientation.</p></header>
-<main><section class="card">${driveMessage}<div class="actions"><a class="button" href="/">Submit Another Candidate</a></div></section></main>`);
+<main><section class="card">${driveMessage}<div class="actions"><a class="button" href="/">Submit Another Candidate</a><a class="button light" href="/portal">Admin Portal</a></div></section></main>`);
 }
 
 function optionTags(options: readonly string[], selected: string): string {
@@ -179,13 +187,13 @@ function candidateRow(candidate: InternCandidateView, statusOptions: readonly st
 
 export function renderAdminLogin(hasTokenConfigured: boolean): string {
 	return page("Admin Login", `
-<header class="hero"><p class="badge">Admin only</p><h1>Tracker Login</h1><p>The intern tracker is private. Enter the admin token to manage Rere's candidate list.</p></header>
+<header class="hero"><p class="badge">Admin only • 1SV Portal</p><h1>Admin Portal Login</h1><p>The intern tracker is private. Enter the admin token to see every submission, the current candidate list, Drive links, statuses, notes, and final placement fields.</p></header>
 <main>
 	<section class="card">
 		${hasTokenConfigured ? "" : `<p class="notice"><strong>ADMIN_TOKEN is not configured yet.</strong> Add it as a Worker secret before exposing the tracker.</p>`}
 		<form method="get" action="/admin">
 			<label>Admin Token<input name="token" type="password" autocomplete="current-password" required /></label>
-			<div class="actions"><button type="submit">Open Admin Tracker</button><a class="button light" href="/">Back to Intake Form</a></div>
+			<div class="actions"><button type="submit">Open Admin Portal</button><a class="button light" href="/">Back to Intake Form</a></div>
 		</form>
 	</section>
 </main>`);
@@ -195,12 +203,18 @@ export function renderAdmin(candidates: InternCandidateView[], stats: DashboardS
 	return page("1SV Intern Admin Tracker", `
 <header class="hero">
 	<p class="badge">Admin tracker • Assigned to Rere • Support by Brittany / BB Management</p>
-	<h1>Intern Tracker</h1>
-	<p>Manage first contact, resume/portfolio collection, interview scheduling, trial assignments, final placement recommendations, and Lafayette Taylor's final acceptance review.</p>
+	<h1>Admin Portal</h1>
+	<p>This is the private portal for Rere, Brittany / BB Management, and Lafayette to see every intern submission, current-list import, interview status, notes, Drive links, and final placement.</p>
 </header>
 <main>
-	<section class="card">
-		<div class="actions"><a class="button" href="/">Public Intake Form</a><a class="button secondary" href="/export.csv${escapeHtml(adminQuery)}">Export CSV for Google Sheets</a><a class="button light" href="/google-drive-setup">Google Drive Setup</a><a class="button light" href="/api/candidates${escapeHtml(adminQuery)}">JSON API</a></div>
+	<section class="card storage">
+		<h2>Saved Data Location</h2>
+		<div class="grid">
+			<div><h3>Candidate tracker</h3><p class="small">Saved in Cloudflare D1 database binding <code>DB</code>, table <code>intern_candidates</code>. Activity history is saved in <code>intern_activity_log</code>.</p></div>
+			<div><h3>Uploaded files</h3><p class="small">Saved in Google Drive folder <code>1 Soundvibe Studios Intern Intake</code> only when Drive sync is connected. Resume/portfolio Drive URLs appear in each candidate row.</p></div>
+			<div><h3>Admin portal URL</h3><p class="small">Use <code>/portal</code> or <code>/admin</code> with your admin token to view and manage everything.</p></div>
+		</div>
+		<div class="actions"><a class="button" href="/">Public Intake Form</a><a class="button secondary" href="/export.csv${escapeHtml(adminQuery)}">Export CSV for Google Sheets</a><a class="button light" href="/google-drive-setup${escapeHtml(adminQuery)}">Google Drive Setup</a><a class="button light" href="/api/candidates${escapeHtml(adminQuery)}">JSON API</a></div>
 	</section>
 	<section class="grid">
 		<div class="stat"><span>Total Candidates</span><strong>${stats.total}</strong></div>
