@@ -11,13 +11,13 @@ export type SubmissionView = {
 	sponsorLevel?: string;
 };
 
-export type EmailStatus = "sent" | "failed";
+export type EmailStatus = "sent" | "sent-to-dashboard" | "failed";
 
 export type SubmissionStatus =
 	| { kind: "success"; email: EmailStatus }
 	| { kind: "error"; missingFields?: string[]; database?: "failed" };
 
-const organizerEmail = "freegameproductions@gmail.com";
+const defaultOrganizerEmail = "freegameproductions@gmail.com";
 
 const escapeHtml = (value = "") =>
 	value
@@ -30,7 +30,7 @@ const escapeHtml = (value = "") =>
 const selected = (current: string | undefined, value: string) => (current === value ? " selected" : "");
 const checked = (value?: string) => (value === "Yes" ? " checked" : "");
 
-const submissionNotice = (submission?: SubmissionView, status?: SubmissionStatus) => {
+const submissionNotice = (submission?: SubmissionView, status?: SubmissionStatus, organizerEmail = defaultOrganizerEmail) => {
 	if (!submission || !status) return "";
 
 	const name = escapeHtml(submission.name);
@@ -42,11 +42,13 @@ const submissionNotice = (submission?: SubmissionView, status?: SubmissionStatus
 
 	if (status.kind === "success") {
 		const emailMessage =
-			status.email === "sent"
-				? `The form was also forwarded to <strong>${organizerEmail}</strong>.`
-				: `Your request was saved, but the email service did not confirm delivery. Please also email <strong>${organizerEmail}</strong> so nothing is missed.`;
+			status.email === "sent-to-dashboard"
+				? "The form was also sent to the FlowForm/FoxFlow dashboard with the uploaded file attached when supported by your plan."
+				: status.email === "sent"
+					? `The form was also forwarded to <strong>${organizerEmail}</strong> with the uploaded file attached when supported by the provider.`
+					: `Your request was saved, but the form provider did not confirm delivery. Please also email <strong>${organizerEmail}</strong> so nothing is missed.`;
 
-		return `<div class="notice ${status.email === "sent" ? "success" : "warning"}" role="status">
+		return `<div class="notice ${status.email === "failed" ? "warning" : "success"}" role="status">
 			<strong>Thank you${name ? `, ${name}` : ""}!</strong>
 			<span>Your request has been received. ${emailMessage}</span>
 			<small>Email: ${email || "provided"} · Lane: ${role} · Upload: ${fileName} · Sponsorship: ${sponsorship} · Media consent: ${mediaConsent}</small>
@@ -63,7 +65,7 @@ const submissionNotice = (submission?: SubmissionView, status?: SubmissionStatus
 	</div>`;
 };
 
-export function renderHtml(submission?: SubmissionView, status?: SubmissionStatus) {
+export function renderHtml(submission?: SubmissionView, status?: SubmissionStatus, organizerEmail = defaultOrganizerEmail) {
 	const name = escapeHtml(submission?.name);
 	const email = escapeHtml(submission?.email);
 	const role = submission?.role;
@@ -221,9 +223,9 @@ export function renderHtml(submission?: SubmissionView, status?: SubmissionStatu
 			</section>
 
 			<aside class="card form-card" id="apply">
-				${submissionNotice(submission, status)}
+				${submissionNotice(submission, status, organizerEmail)}
 				<h2>Request your invitation</h2>
-				<p>This active form saves requests to the event database and forwards the details to <strong>${organizerEmail}</strong>. Uploads are accepted for review; the email includes the uploaded file name.</p>
+				<p>This active form saves requests to the event database and forwards the details to the connected form provider. Uploads are sent with the submission when the provider endpoint and plan support file attachments.</p>
 
 				<form method="POST" enctype="multipart/form-data">
 					<div class="two">
@@ -259,7 +261,7 @@ export function renderHtml(submission?: SubmissionView, status?: SubmissionStatu
 
 					<div class="field">
 						<label for="upload">Upload sample, EPK, flyer or portfolio</label>
-						<input id="upload" name="upload" type="file" accept="image/*,.pdf,.mp3,.wav,.mp4" />
+						<input id="upload" name="upload" type="file" accept="image/*,.pdf" />
 					</div>
 
 					<div class="field">
@@ -291,7 +293,7 @@ export function renderHtml(submission?: SubmissionView, status?: SubmissionStatu
 
 					<button class="button" type="submit">Submit request</button>
 				</form>
-				<p class="footer-note">If the email service has not been verified yet, the page will still save the request and ask applicants to email ${organizerEmail} directly as a backup.</p>
+				<p class="footer-note">For FlowForm/FoxFlow dashboard delivery, set a FLOWFORM_TOKEN or FLOWFORM_ENDPOINT secret on the Worker. If the form provider is not verified yet, this page still saves the request and asks applicants to email ${organizerEmail} directly as a backup.</p>
 			</aside>
 		</main>
 	</div>

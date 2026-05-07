@@ -1,14 +1,23 @@
 import { renderHtml, type EmailStatus, type SubmissionView } from "./renderHtml";
 
-const FLOWFORM_ENDPOINT = "https://flowform.to/submit";
-const SUBMISSION_EMAIL = "freegameproductions@gmail.com";
+const DEFAULT_FLOWFORM_ENDPOINT = "https://flowform.to/submit";
+const DEFAULT_SUBMISSION_EMAIL = "freegameproductions@gmail.com";
 const EVENT_NAME = "The Girls Room Creative Lock In";
 
-type SubmissionRecord = Required<SubmissionView> & {
-	social: string;
-	notes: string;
-	sponsorName: string;
-	sponsorLevel: string;
+type AppEnv = Env & {
+	FLOWFORM_ENDPOINT?: string;
+	FLOWFORM_TOKEN?: string;
+	FORM_PROVIDER_ENDPOINT?: string;
+	FORM_PROVIDER_TOKEN?: string;
+	SUBMISSION_EMAIL?: string;
+};
+
+type SubmissionRecord = Required<SubmissionView>;
+
+type ProviderConfig = {
+	endpoint: string;
+	recipientEmail: string;
+	usesDashboardEndpoint: boolean;
 };
 
 const htmlHeaders = {
@@ -25,10 +34,12 @@ const checkboxValue = (formData: FormData, key: string) => (formData.has(key) ? 
 const isNamedFile = (value: unknown): value is File =>
 	typeof File !== "undefined" && value instanceof File && value.name.trim().length > 0;
 
-const fileNameFromForm = (formData: FormData) => {
+const fileFromForm = (formData: FormData) => {
 	const value = formData.get("upload");
-	return isNamedFile(value) ? value.name.trim() : "";
+	return isNamedFile(value) ? value : undefined;
 };
+
+const fileNameFromForm = (formData: FormData) => fileFromForm(formData)?.name.trim() || "";
 
 const submissionFromForm = (formData: FormData): SubmissionRecord => ({
 	name: textValue(formData, "name"),
@@ -54,7 +65,20 @@ const validateSubmission = (submission: SubmissionRecord) => {
 	return missingFields;
 };
 
-async function ensureSubmissionTable(env: Env) {
+const providerConfig = (env: AppEnv): ProviderConfig => {
+	const recipientEmail = env.SUBMISSION_EMAIL || DEFAULT_SUBMISSION_EMAIL;
+	const configuredEndpoint = env.FLOWFORM_ENDPOINT?.trim() || env.FORM_PROVIDER_ENDPOINT?.trim();
+	const configuredToken = env.FLOWFORM_TOKEN?.trim() || env.FORM_PROVIDER_TOKEN?.trim();
+	const endpoint = configuredEndpoint || (configuredToken ? `https://flowform.to/f/${configuredToken}` : DEFAULT_FLOWFORM_ENDPOINT);
+
+	return {
+		endpoint,
+		recipientEmail,
+		usesDashboardEndpoint: endpoint.includes("/f/"),
+	};
+};
+
+async function ensureSubmissionTable(env: AppEnv) {
 	await env.DB.prepare(
 		`CREATE TABLE IF NOT EXISTS creative_lock_in_submissions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,7 +97,7 @@ async function ensureSubmissionTable(env: Env) {
 	).run();
 }
 
-async function saveSubmission(env: Env, submission: SubmissionRecord) {
+async function saveSubmission(env: AppEnv, submission: SubmissionRecord) {
 	await ensureSubmissionTable(env);
 
 	try {
@@ -139,48 +163,67 @@ async function saveSubmission(env: Env, submission: SubmissionRecord) {
 	}
 }
 
-async function sendSubmissionEmail(submission: SubmissionRecord): Promise<EmailStatus> {
-	const emailFormData = new FormData();
-	emailFormData.append("_to", SUBMISSION_EMAIL);
-	emailFormData.append("_subject", "New Creative Lock In invite request");
-	emailFormData.append("event", EVENT_NAME);
-	emailFormData.append("name", submission.name);
-	emailFormData.append("email", submission.email);
-	emailFormData.append("creative_lane", submission.role);
-	emailFormData.append("instagram_or_website", submission.social || "Not provided");
-	emailFormData.append("notes", submission.notes || "Not provided");
-	emailFormData.append("upload_file_name", submission.fileName || "No file attached");
-	emailFormData.append("media_consent", submission.mediaConsent);
-	emailFormData.append("sponsorship_interest", submission.sponsorshipInterest);
-	emailFormData.append("sponsor_name", submission.sponsorName || "Not provided");
-	emailFormData.append("sponsor_level", submission.sponsorLevel || "Not provided");
+function buildProviderFormData(submission: SubmissionRecord, originalFormData: FormData, config: ProviderConfig) {
+	const providerFormData = new FormData();
 
+	if (!config.usesDashboardEndpoint) {
+		providerFormData.append("_to", config.recipientEmail);
+	}
+
+	providerFormData.append("_subject", "New Creative Lock In invite request");
+	providerFormData.append("_replyto", submission.email);
+	providerFormData.append("event", EVENT_NAME);
+	providerFormData.append("name", submission.name);
+	providerFormData.append("email", submission.email);
+	providerFormData.append("creative_lane", submission.role);
+	providerFormData.append("instagram_or_website", submission.social || "Not provided");
+	providerFormData.append("notes", submission.notes || "Not provided");
+	providerFormData.append("upload_file_name", submission.fileName || "No file attached");
+	providerFormData.append("media_consent", submission.mediaConsent);
+	providerFormData.append("sponsorship_interest", submission.sponsorshipInterest);
+	providerFormData.append("sponsor_name", submission.sponsorName || "Not provided");
+	providerFormData.append("sponsor_level", submission.sponsorLevel || "Not provided");
+
+	const upload = fileFromForm(originalFormData);
+	if (upload) {
+		providerFormData.append("upload", upload, upload.name);
+	}
+
+	return providerFormData;
+}
+
+async function sendSubmissionToFormProvider(
+	submission: SubmissionRecord,
+	originalFormData: FormData,
+	config: ProviderConfig,
+): Promise<EmailStatus> {
 	try {
-		const response = await fetch(FLOWFORM_ENDPOINT, {
+		const response = await fetch(config.endpoint, {
 			method: "POST",
-			body: emailFormData,
-			signal: AbortSignal.timeout(8000),
+			body: buildProviderFormData(submission, originalFormData, config),
+			signal: AbortSignal.timeout(15000),
 		});
 
 		if (response.ok) {
-			return "sent";
+			return config.usesDashboardEndpoint ? "sent-to-dashboard" : "sent";
 		}
 
-		console.warn(`FlowForm email delivery returned ${response.status}`);
+		console.warn(`Form provider delivery returned ${response.status}`);
 		return "failed";
 	} catch (error) {
-		console.warn("FlowForm email delivery failed", error);
+		console.warn("Form provider delivery failed", error);
 		return "failed";
 	}
 }
 
-async function handleSubmission(request: Request, env: Env) {
+async function handleSubmission(request: Request, env: AppEnv) {
 	const formData = await request.formData();
 	const submission = submissionFromForm(formData);
 	const missingFields = validateSubmission(submission);
+	const config = providerConfig(env);
 
 	if (missingFields.length > 0) {
-		return new Response(renderHtml(submission, { kind: "error", missingFields }), {
+		return new Response(renderHtml(submission, { kind: "error", missingFields }, config.recipientEmail), {
 			status: 400,
 			headers: htmlHeaders,
 		});
@@ -190,15 +233,15 @@ async function handleSubmission(request: Request, env: Env) {
 		await saveSubmission(env, submission);
 	} catch (error) {
 		console.error("D1 submission save failed", error);
-		return new Response(renderHtml(submission, { kind: "error", database: "failed" }), {
+		return new Response(renderHtml(submission, { kind: "error", database: "failed" }, config.recipientEmail), {
 			status: 500,
 			headers: htmlHeaders,
 		});
 	}
 
-	const email = await sendSubmissionEmail(submission);
+	const email = await sendSubmissionToFormProvider(submission, formData, config);
 
-	return new Response(renderHtml(submission, { kind: "success", email }), {
+	return new Response(renderHtml(submission, { kind: "success", email }, config.recipientEmail), {
 		headers: htmlHeaders,
 	});
 }
@@ -216,8 +259,8 @@ export default {
 			});
 		}
 
-		return new Response(request.method === "HEAD" ? null : renderHtml(), {
+		return new Response(request.method === "HEAD" ? null : renderHtml(undefined, undefined, providerConfig(env).recipientEmail), {
 			headers: htmlHeaders,
 		});
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<AppEnv>;
