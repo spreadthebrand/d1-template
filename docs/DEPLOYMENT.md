@@ -6,7 +6,8 @@
 2. Create or reuse a D1 database and update `wrangler.json` if needed.
 3. Apply migrations locally with `npm run seedLocalD1`.
 4. Validate with `npm run check`.
-5. Deploy with `npm run deploy`.
+5. Add production secrets with `npx wrangler secret put OPENAI_API_KEY` and any approved provider credentials.
+6. Deploy with `npm run deploy`.
 
 ## Vercel + Next.js production target
 
@@ -24,5 +25,5 @@ This repository currently ships a Cloudflare Worker implementation that mirrors 
 - Complete Meta App Review before using Instagram messaging APIs.
 - Store provider tokens encrypted.
 - Add webhook signature verification for Meta, GoHighLevel, Zapier, Twilio, and SendGrid.
-- Add background jobs for follow-up scheduling, never direct mass blasting.
+- Add Cloudflare Queues/Cron Triggers or a Next.js job runner for follow-up scheduling, never direct mass blasting.
 - Retain audit logs for compliance reviews.

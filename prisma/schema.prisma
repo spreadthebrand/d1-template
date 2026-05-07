@@ -39,6 +39,19 @@ model Workspace {
   automationRules     AutomationRule[]
   integrations        Integration[]
   auditLogs           AuditLog[]
+  leadSearches        LeadSearch[]
+}
+
+model LeadSearch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  searchType  String
+  query       String
+  connector   String
+  status      String    @default("Ready for connector")
+  notes       String?
+  createdAt   DateTime  @default(now())
 }
 
 model TeamMember {

@@ -1,5 +1,23 @@
 import { approvalQueue, bookingCtas, demoCampaigns, demoLeads, leadStatuses, recentActivity, roles, tones } from "./data";
 
+export type AppState = {
+  leads: typeof demoLeads;
+  campaigns: typeof demoCampaigns;
+  approvalQueue: typeof approvalQueue;
+  metrics: { totalLeadsDiscovered: number; newLeadsToday: number; repliesReceived: number; campaignsRunning: number; bookingsCreated: number; conversionRate: string };
+  recentActivity: string[];
+  bookingLinks: { links: Array<{ id?: string; label: string; provider?: string; url: string }>; defaultCtas: string[] };
+};
+
+export const staticState: AppState = {
+  leads: demoLeads,
+  campaigns: demoCampaigns,
+  approvalQueue,
+  metrics: { totalLeadsDiscovered: 1284, newLeadsToday: 37, repliesReceived: 96, campaignsRunning: 6, bookingsCreated: 18, conversionRate: "7.4%" },
+  recentActivity,
+  bookingLinks: { links: [], defaultCtas: bookingCtas },
+};
+
 type Page =
   | "login"
   | "dashboard"
@@ -73,29 +91,29 @@ function card(title: string, value: string, helper = "") {
 }
 
 function button(label: string, kind = "") {
-  return `<button class="btn ${kind}" type="button">${label}</button>`;
+  return `<button class="btn ${kind}" type="submit">${label}</button>`;
 }
 
-export function renderPage(page: Page, pathname = "/") {
+export function renderPage(page: Page, pathname = "/", state = staticState) {
   switch (page) {
     case "login":
       return shell("login", "Login", "", `<section class="login-card"><div class="brand login-brand"><span class="brand-mark">1SV</span><span><b>Growth Engine</b><small>Luxury outreach dashboard</small></span></div><h1>Turn Instagram attention into booked sessions — safely.</h1><p>Log in with Clerk or NextAuth in production. Demo mode shows the complete SaaS workflow.</p><form><label>Email<input value="owner@1soundvibe.com" /></label><label>Password<input value="••••••••••••" type="password" /></label><a class="btn wide" href="/dashboard">Open Dashboard</a></form><p class="fine-print">No password harvesting, fake Instagram login, or unauthorized scraping is implemented.</p></section>`);
     case "dashboard":
-      return shell(page, "Dashboard", "A clean operating view for lead discovery, approvals, replies, bookings, and compliance.", dashboard());
+      return shell(page, "Dashboard", "A clean operating view for lead discovery, approvals, replies, bookings, and compliance.", dashboard(state));
     case "leads":
-      return shell(page, "Leads", "Discover public leads through compliant connectors or import consent-safe CSV files.", leads());
+      return shell(page, "Leads", "Discover public leads through compliant connectors or import consent-safe CSV files.", leads(state));
     case "lead-profile":
-      return shell(page, "Lead Profile", "Review status, source, tags, notes, reminders, and conversation history.", leadProfile(pathname));
+      return shell(page, "Lead Profile", "Review status, source, tags, notes, reminders, and conversation history.", leadProfile(pathname, state));
     case "campaigns":
-      return shell(page, "Campaigns", "Reusable outreach templates with personalization tokens and stop conditions.", campaigns());
+      return shell(page, "Campaigns", "Reusable outreach templates with personalization tokens and stop conditions.", campaigns(state));
     case "campaign-builder":
       return shell(page, "Campaign Builder", "Create a consent-aware sequence that stops when a person replies.", campaignBuilder());
     case "approval-queue":
-      return shell(page, "Message Approval Queue", "Approve, edit, or reject every message before it can be sent.", approvalQueuePage());
+      return shell(page, "Message Approval Queue", "Approve, edit, or reject every message before it can be sent.", approvalQueuePage(state));
     case "inbox":
-      return shell(page, "Inbox", "Track replies, sentiment, recommended next steps, and booking actions.", inbox());
+      return shell(page, "Inbox", "Track replies, sentiment, recommended next steps, and booking actions.", inbox(state));
     case "booking-links":
-      return shell(page, "Booking Links", "Connect Calendly, Wix, GoHighLevel, or custom booking URLs.", bookingLinks());
+      return shell(page, "Booking Links", "Connect Calendly, Wix, GoHighLevel, or custom booking URLs.", bookingLinks(state));
     case "team":
       return shell(page, "Team Members", "Role-based access for owners, managers, VAs, and sales reps.", team());
     case "settings":
@@ -107,39 +125,39 @@ export function renderPage(page: Page, pathname = "/") {
   }
 }
 
-function dashboard() {
-  return `<section class="metrics">${card("Total leads discovered", "1,284", "+37 today")}${card("New leads today", "37", "CSV + public discovery")}${card("Replies received", "96", "7 positive today")}${card("Campaigns running", "6", "All review-gated")}${card("Bookings created", "18", "This month")}${card("Conversion rate", "7.4%", "Lead to booking")}</section><section class="grid two"><div class="panel"><div class="panel-head"><h2>Recent activity</h2>${button("Follow Up", "small")}</div><ul class="activity">${recentActivity.map((item) => `<li>${item}</li>`).join("")}</ul></div><div class="panel gold-panel"><h2>Today’s safety snapshot</h2><p>32 draft messages pending human review. 18 remaining safe-send slots based on workspace daily limits.</p><div class="progress"><span style="width:64%"></span></div><small>Mass blasting is disabled. Stop words and Do Not Contact statuses override every rule.</small></div></section>`;
+function dashboard(state: AppState) {
+  return `<section class="metrics">${card("Total leads discovered", String(state.metrics.totalLeadsDiscovered), "+" + state.metrics.newLeadsToday + " today")}${card("New leads today", String(state.metrics.newLeadsToday), "CSV + public discovery")}${card("Replies received", String(state.metrics.repliesReceived), "Live CRM statuses")}${card("Campaigns running", String(state.metrics.campaignsRunning), "All review-gated")}${card("Bookings created", String(state.metrics.bookingsCreated), "Live booking statuses")}${card("Conversion rate", state.metrics.conversionRate, "Lead to booking")}</section><section class="grid two"><div class="panel"><div class="panel-head"><h2>Recent activity</h2>${button("Follow Up", "small")}</div><ul class="activity">${state.recentActivity.map((item) => `<li>${item}</li>`).join("")}</ul></div><div class="panel gold-panel"><h2>Today’s safety snapshot</h2><p>32 draft messages pending human review. 18 remaining safe-send slots based on workspace daily limits.</p><div class="progress"><span style="width:64%"></span></div><small>Mass blasting is disabled. Stop words and Do Not Contact statuses override every rule.</small></div></section>`;
 }
 
-function leads() {
-  return `<section class="panel" id="discovery"><div class="panel-head"><div><h2>Lead discovery</h2><p>Architecture supports Meta-approved APIs, compliant providers, and manual uploads.</p></div>${button("Create Search", "small")}</div><div class="chips">${["Instagram username", "Hashtags", "Keywords", "Location", "Niche", "Competitor account", "Post URL", "Commenters", "Followers", "Likers if legally available"].map((x) => `<span>${x}</span>`).join("")}</div><div class="notice"><b>Connector policy:</b> If official API access is unavailable, connect a Meta-reviewed app, compliant data provider, or CSV upload here. Only public data may be collected, and messaging still requires approval or consent.</div></section><section class="panel" id="import"><div class="panel-head"><h2>Manual Lead Import</h2>${button("Import Leads", "small")}</div><p class="muted">CSV columns: name, username, profile URL, email, phone, platform, source, tags, notes.</p></section><section class="panel"><div class="panel-head"><h2>CRM leads</h2><a class="btn small" href="/lead/ld_001">Open Profile</a></div><table><thead><tr><th>Name</th><th>Status</th><th>Source</th><th>Tags</th><th>Assigned</th><th>Last contact</th></tr></thead><tbody>${demoLeads.map((lead) => `<tr><td><a href="/lead/${lead.id}"><b>${lead.name}</b><br><small>${lead.username}</small></a></td><td><span class="status">${lead.status}</span></td><td>${lead.source}</td><td>${lead.tags.map((tag) => `<span class="tag">${tag}</span>`).join(" ")}</td><td>${lead.assignedTo}</td><td>${lead.lastContacted || "Never"}</td></tr>`).join("")}</tbody></table></section>`;
+function leads(state: AppState) {
+  return `<section class="panel" id="discovery"><div class="panel-head"><div><h2>Lead discovery</h2><p>Architecture supports Meta-approved APIs, compliant providers, and manual uploads.</p></div></div><form class="inline-form" method="post" action="/actions/lead-searches"><label>Search type<select name="searchType">${["Instagram username", "Hashtags", "Keywords", "Location", "Niche", "Competitor account", "Post URL", "Commenters", "Followers", "Likers if legally available"].map((x) => `<option>${x}</option>`).join("")}</select></label><label>Query<input name="query" placeholder="@artist, #houstonartist, Midtown Houston" /></label><label>Connector<select name="connector"><option>CSV/manual</option><option>Meta Graph API after approval</option><option>Compliant public-data provider</option></select></label>${button("Create Search", "small")}</form><div class="notice"><b>Connector policy:</b> If official API access is unavailable, connect a Meta-reviewed app, compliant data provider, or CSV upload here. Only public data may be collected, and messaging still requires approval or consent.</div></section><section class="panel" id="import"><div class="panel-head"><h2>Manual Lead Import</h2></div><form method="post" action="/actions/leads" class="builder"><div><label>Name<input name="name" placeholder="Lead name" /></label><label>Instagram username<input name="username" placeholder="@username" /></label><label>Profile URL<input name="profileUrl" placeholder="https://instagram.com/username" /></label><label>Email<input name="email" /></label></div><div><label>Phone<input name="phone" /></label><label>Platform<input name="platform" value="Instagram" /></label><label>Source<input name="source" value="Manual import" /></label><label>Tags<input name="tags" placeholder="R&B,Houston,Warm" /></label><label>Notes<textarea name="notes"></textarea></label>${button("Import Leads", "small")}</div></form><p class="muted">CSV/API columns: name, username, profile URL, email, phone, platform, source, tags, notes.</p></section><section class="panel"><div class="panel-head"><h2>CRM leads</h2><a class="btn small" href="/lead/ld_001">Open Profile</a></div><table><thead><tr><th>Name</th><th>Status</th><th>Source</th><th>Tags</th><th>Assigned</th><th>Last contact</th></tr></thead><tbody>${state.leads.map((lead) => `<tr><td><a href="/lead/${lead.id}"><b>${lead.name}</b><br><small>${lead.username}</small></a></td><td><span class="status">${lead.status}</span></td><td>${lead.source}</td><td>${lead.tags.map((tag) => `<span class="tag">${tag}</span>`).join(" ")}</td><td>${lead.assignedTo}</td><td>${lead.lastContacted || "Never"}</td></tr>`).join("")}</tbody></table></section>`;
 }
 
-function leadProfile(pathname: string) {
+function leadProfile(pathname: string, state: AppState) {
   const id = pathname.split("/").pop();
-  const lead = demoLeads.find((item) => item.id === id) ?? demoLeads[0];
+  const lead = state.leads.find((item) => item.id === id) ?? state.leads[0] ?? demoLeads[0];
   return `<section class="grid profile-grid"><div class="panel"><p class="eyebrow">${lead.platform} · ${lead.source}</p><h2>${lead.name}</h2><p><a href="${lead.profileUrl}">${lead.username}</a></p><p>${lead.bio}</p><div class="chips">${leadStatuses.map((status) => `<span class="${status === lead.status ? "selected" : ""}">${status}</span>`).join("")}</div><dl><dt>Assigned team member</dt><dd>${lead.assignedTo}</dd><dt>Last contacted</dt><dd>${lead.lastContacted || "Never"}</dd><dt>Tags</dt><dd>${lead.tags.join(", ")}</dd><dt>Notes</dt><dd>${lead.notes}</dd></dl><div class="row-actions">${button("Generate DM", "small")}${button("Book Tour", "small ghost")}${button("Follow Up", "small ghost")}</div></div><div class="panel"><h2>Conversation history</h2><div class="message mine">Shared studio tour link after manual approval.</div><div class="message">This looks good. Do you have evening times?</div><h3>Follow-up reminder</h3><p>Due May 8, 2026: Confirm booking preference and send calendar link.</p></div></section>`;
 }
 
-function campaigns() {
-  return `<section class="campaign-grid">${demoCampaigns.map((campaign) => `<article class="panel campaign"><p class="eyebrow">${campaign.type}</p><h2>${campaign.name}</h2><p>${campaign.audience}</p><ol><li>${campaign.step1}</li><li>${campaign.followUp1}</li><li>${campaign.followUp2}</li></ol><p><b>Wait:</b> ${campaign.waitTime}</p><p><b>Stop:</b> ${campaign.stopCondition}</p><span class="status">${campaign.limit}/day cap</span></article>`).join("")}</section>`;
+function campaigns(state: AppState) {
+  return `<section class="campaign-grid">${state.campaigns.map((campaign) => `<article class="panel campaign"><p class="eyebrow">${campaign.type}</p><h2>${campaign.name}</h2><p>${campaign.audience}</p><ol><li>${campaign.step1}</li><li>${campaign.followUp1}</li><li>${campaign.followUp2}</li></ol><p><b>Wait:</b> ${campaign.waitTime}</p><p><b>Stop:</b> ${campaign.stopCondition}</p><span class="status">${campaign.limit}/day cap</span></article>`).join("")}</section>`;
 }
 
 function campaignBuilder() {
   const templates = ["Studio tour invite", "Recording session offer", "Membership offer", "Vibe Check event invite", "Podcast studio invite", "Producer collaboration invite", "Follow-up sequence"];
-  return `<section class="panel builder"><div><label>Campaign template<select>${templates.map((x) => `<option>${x}</option>`).join("")}</select></label><label>Message step 1<textarea>Hey {first_name}, saw you through {source}. Want me to send a quick 1 Soundvibe booking link?</textarea></label><label>Follow-up 1<textarea>Just circling back, {first_name}. We have a few openings this week.</textarea></label><label>Follow-up 2<textarea>No pressure — should I close the loop or keep you posted?</textarea></label></div><div><label>Wait time between messages<input value="3 days" /></label><label>Stop condition<input value="Stop when user replies, books, says stop, or is marked Do Not Contact" /></label><label>Personalization tokens<input value="{first_name}, {username}, {city}, {source}" /></label><label>Tone<select>${tones.map((tone) => `<option>${tone}</option>`).join("")}</select></label><div class="row-actions">${button("Generate DM")}${button("Create Campaign", "ghost")}</div></div></section>`;
+  return `<form class="panel builder" method="post" action="/actions/campaigns"><div><label>Campaign name<input name="name" value="New 1SV Campaign" /></label><label>Campaign template<select name="campaignType">${templates.map((x) => `<option>${x}</option>`).join("")}</select></label><label>Audience<input name="audience" value="Houston creators" /></label><label>Message step 1<textarea name="messageStep1">Hey {first_name}, saw you through {source}. Want me to send a quick 1 Soundvibe booking link?</textarea></label><label>Follow-up 1<textarea name="followUp1">Just circling back, {first_name}. We have a few openings this week.</textarea></label><label>Follow-up 2<textarea name="followUp2">No pressure — should I close the loop or keep you posted?</textarea></label></div><div><label>Wait time in hours<input name="waitTimeHours" value="72" /></label><label>Stop condition<input name="stopCondition" value="Stop when user replies, books, says stop, or is marked Do Not Contact" /></label><label>Daily limit<input name="dailyLimit" value="25" /></label><label>Personalization tokens<input value="{first_name}, {username}, {city}, {source}" /></label><label>Tone<select name="tone">${tones.map((tone) => `<option>${tone}</option>`).join("")}</select></label><div class="row-actions">${button("Create Campaign")}</div></div></form>`;
 }
 
-function approvalQueuePage() {
-  return `<section class="panel"><div class="panel-head"><h2>Drafts awaiting review</h2><span class="status">Human approval required</span></div>${approvalQueue.map((item) => `<article class="approval"><div><p class="eyebrow">${item.campaign} · ${item.channel}</p><h3>${item.lead}</h3><p>${item.draft}</p><small>Risk: ${item.risk}</small></div><div class="approval-actions">${button("Approve Message", "small")}${button("Edit", "small ghost")}${button("Reject", "small danger")}</div></article>`).join("")}</section>`;
+function approvalQueuePage(state: AppState) {
+  return `<section class="panel"><div class="panel-head"><h2>Drafts awaiting review</h2><span class="status">Human approval required</span></div>${state.approvalQueue.map((item) => `<article class="approval"><div><p class="eyebrow">${item.campaign} · ${item.channel}</p><h3>${item.lead}</h3><p>${item.draft}</p><small>Risk: ${item.risk}</small></div><div class="approval-actions"><form method="post" action="/actions/approval"><input type="hidden" name="id" value="${item.id}" /><input type="hidden" name="action" value="approve" />${button("Approve Message", "small")}</form><form method="post" action="/actions/approval"><input type="hidden" name="id" value="${item.id}" /><input type="hidden" name="action" value="reject" />${button("Reject", "small danger")}</form></div></article>`).join("")}</section>`;
 }
 
-function inbox() {
-  return `<section class="panel"><table><thead><tr><th>Lead</th><th>Sentiment</th><th>Recommended next reply</th><th>Actions</th></tr></thead><tbody>${demoLeads.filter((lead) => ["Replied", "Interested", "Booked Tour"].includes(lead.status)).map((lead) => `<tr><td><b>${lead.name}</b><br><small>${lead.username}</small></td><td><span class="status">${lead.sentiment}</span></td><td>Thanks ${lead.name.split(" ")[0]} — want me to send the best booking link for you?</td><td>${button("Booking Link", "small")} ${button("Interested", "small ghost")} ${button("Not Interested", "small ghost")}</td></tr>`).join("")}</tbody></table></section>`;
+function inbox(state: AppState) {
+  return `<section class="panel"><table><thead><tr><th>Lead</th><th>Sentiment</th><th>Recommended next reply</th><th>Actions</th></tr></thead><tbody>${state.leads.filter((lead) => ["Replied", "Interested", "Booked Tour"].includes(lead.status)).map((lead) => `<tr><td><b>${lead.name}</b><br><small>${lead.username}</small></td><td><span class="status">${lead.sentiment}</span></td><td>Thanks ${lead.name.split(" ")[0]} — want me to send the best booking link for you?</td><td>${button("Booking Link", "small")} ${button("Interested", "small ghost")} ${button("Not Interested", "small ghost")}</td></tr>`).join("")}</tbody></table></section>`;
 }
 
-function bookingLinks() {
-  return `<section class="grid two"><div class="panel"><h2>Booking providers</h2>${["Calendly link", "Wix booking link", "GoHighLevel calendar", "Custom booking URL"].map((label) => `<label>${label}<input placeholder="https://" /></label>`).join("")}<button class="btn">Save Booking Links</button></div><div class="panel"><h2>Default 1 Soundvibe CTAs</h2><div class="chips cta">${bookingCtas.map((cta) => `<span>${cta}</span>`).join("")}</div></div></section>`;
+function bookingLinks(state: AppState) {
+  return `<section class="grid two"><form class="panel" method="post" action="/actions/booking-links"><h2>Booking providers</h2><label>Label<input name="label" value="Studio Tour" /></label><label>Provider<select name="provider"><option>Calendly</option><option>Wix Booking</option><option>GoHighLevel</option><option>Custom URL</option></select></label><label>URL<input name="url" placeholder="https://" /></label><button class="btn">Save Booking Link</button></form><div class="panel"><h2>Default 1 Soundvibe CTAs</h2><div class="chips cta">${state.bookingLinks.defaultCtas.map((cta) => `<span>${cta}</span>`).join("")}</div><h3>Saved links</h3><ul class="activity">${state.bookingLinks.links.map((link) => `<li><a href="${link.url}">${link.label}</a> <small>${link.provider ?? "Custom"}</small></li>`).join("")}</ul></div></section>`;
 }
 
 function team() {

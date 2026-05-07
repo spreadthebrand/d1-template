@@ -2,7 +2,7 @@
 
 1SV Growth Engine is an ethical Instagram lead discovery, CRM, and outreach automation platform for creators, studios, artists, and small businesses. It is positioned as a simpler, safer alternative to tools like ManyChat, Inflact, and PhantomBuster for teams that want lead organization, AI-assisted drafting, approval queues, and booking workflows without spammy automation.
 
-This starter is implemented as a Cloudflare Worker + D1 app so it can run inside the existing repository. It also includes a PostgreSQL Prisma schema and Vercel deployment notes for a production Next.js migration.
+This starter is implemented as a Cloudflare Worker + D1 app so it can run inside the existing repository. The dashboard, forms, and JSON APIs now read/write D1 data for leads, lead searches, campaigns, booking links, approvals, audit logs, and AI-safe draft generation. It also includes a PostgreSQL Prisma schema and Vercel deployment notes for a production Next.js migration.
 
 ## Compliance-first design
 
@@ -72,6 +72,24 @@ npm run dev
 ```
 
 Open the local Worker URL printed by Wrangler, then visit `/dashboard`.
+
+## Live workflow checks
+
+After `npm run dev`, try these active workflows:
+
+```bash
+curl -X POST http://localhost:8787/api/leads \
+  -H "content-type: application/json" \
+  -d '{"name":"Test Artist","username":"testartist","source":"API"}'
+
+curl http://localhost:8787/api/leads
+
+curl -X PATCH http://localhost:8787/api/approval-queue/msg_001 \
+  -H "content-type: application/json" \
+  -d '{"action":"approve"}'
+```
+
+The HTML forms on `/leads`, `/campaign-builder`, `/approval-queue`, and `/booking-links` also submit to Worker action routes and persist to D1.
 
 ## Validation
 
