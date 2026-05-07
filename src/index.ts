@@ -14,12 +14,14 @@ async function handleSubmission(request: Request, env: Env) {
 	const formData = await request.formData();
 	const uploadFileName = fileNameFromForm(formData);
 	const sponsorshipInterest = formData.has("sponsorshipInterest") ? "Yes" : "No";
+	const mediaConsent = formData.has("mediaConsent") ? "Yes" : "No";
 	const submission: SubmissionView = {
 		name: textValue(formData, "name"),
 		email: textValue(formData, "email"),
 		role: textValue(formData, "role"),
 		fileName: uploadFileName,
 		sponsorshipInterest,
+		mediaConsent,
 	};
 
 	await env.DB.prepare(
@@ -31,9 +33,10 @@ async function handleSubmission(request: Request, env: Env) {
 			notes,
 			upload_file_name,
 			sponsorship_interest,
+			media_consent,
 			sponsor_name,
 			sponsor_level
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 	)
 		.bind(
 			submission.name,
@@ -43,6 +46,7 @@ async function handleSubmission(request: Request, env: Env) {
 			textValue(formData, "notes"),
 			uploadFileName,
 			sponsorshipInterest,
+			mediaConsent,
 			textValue(formData, "sponsorName"),
 			textValue(formData, "sponsorLevel"),
 		)

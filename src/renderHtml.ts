@@ -4,6 +4,7 @@ export type SubmissionView = {
 	role?: string;
 	fileName?: string;
 	sponsorshipInterest?: string;
+	mediaConsent?: string;
 };
 
 const escapeHtml = (value = "") =>
@@ -20,6 +21,7 @@ export function renderHtml(submission?: SubmissionView) {
 	const submittedRole = escapeHtml(submission?.role);
 	const submittedFile = escapeHtml(submission?.fileName || "No file attached");
 	const sponsorshipInterest = escapeHtml(submission?.sponsorshipInterest || "Not selected");
+	const mediaConsent = escapeHtml(submission?.mediaConsent || "Not selected");
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -445,7 +447,7 @@ export function renderHtml(submission?: SubmissionView) {
 			</section>
 
 			<aside class="card form-card" id="apply">
-				${submission ? `<div class="notice"><strong>Thank you${submittedName ? `, ${submittedName}` : ""}!</strong><br />Your request has been received. We logged ${submittedEmail || "your email"}, role: ${submittedRole || "creative"}, upload: ${submittedFile}, sponsorship: ${sponsorshipInterest}.</div>` : ""}
+				${submission ? `<div class="notice"><strong>Thank you${submittedName ? `, ${submittedName}` : ""}!</strong><br />Your request has been received. We logged ${submittedEmail || "your email"}, role: ${submittedRole || "creative"}, upload: ${submittedFile}, sponsorship: ${sponsorshipInterest}, media consent: ${mediaConsent}.</div>` : ""}
 				<h2>Request your invitation</h2>
 				<p>Tell us who you are, upload a sample or flyer, and let us know if you or your brand would like to support the room.</p>
 
@@ -489,6 +491,12 @@ export function renderHtml(submission?: SubmissionView) {
 					<div class="field">
 						<label for="notes">What do you want to create in the room?</label>
 						<textarea id="notes" name="notes" placeholder="Share your collaboration idea, goals, or what you can contribute."></textarea>
+					</div>
+
+					<div class="checks">
+						<label>Media release & recording consent</label>
+						<div class="check-line"><input id="media-consent" name="mediaConsent" type="checkbox" value="Yes" required /> <span>I agree to be photographed, filmed, livestreamed, and/or recorded at The Girls Room Creative Lock In.</span></div>
+						<p class="footer-note"><strong>Media disclaimer:</strong> By attending or submitting this request, you grant Freegame Productions, The Girls Room, event partners, sponsors, and approved media teams the right to capture, edit, publish, distribute, and use your image, voice, likeness, performances, interviews, and submitted media for event documentation, recap content, marketing, social media, press, sponsorship materials, and future promotional use without additional approval or compensation. All event media rights are reserved by the event organizers.</p>
 					</div>
 
 					<div class="checks" id="sponsor">
