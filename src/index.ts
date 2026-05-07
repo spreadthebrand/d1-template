@@ -1,23 +1,20 @@
 import { renderHtml, type EmailStatus, type SubmissionView } from "./renderHtml";
 
-const DEFAULT_FLOWFORM_ENDPOINT = "https://flowform.to/submit";
 const DEFAULT_SUBMISSION_EMAIL = "freegameproductions@gmail.com";
 const EVENT_NAME = "The Girls Room Creative Lock In";
 
 type AppEnv = Env & {
-	FLOWFORM_ENDPOINT?: string;
-	FLOWFORM_TOKEN?: string;
+	FREEFORM_ENDPOINT?: string;
 	FORM_PROVIDER_ENDPOINT?: string;
-	FORM_PROVIDER_TOKEN?: string;
 	SUBMISSION_EMAIL?: string;
 };
 
 type SubmissionRecord = Required<SubmissionView>;
 
 type ProviderConfig = {
-	endpoint: string;
+	endpoint?: string;
 	recipientEmail: string;
-	usesDashboardEndpoint: boolean;
+	usesFreeformEndpoint: boolean;
 };
 
 const htmlHeaders = {
@@ -67,14 +64,12 @@ const validateSubmission = (submission: SubmissionRecord) => {
 
 const providerConfig = (env: AppEnv): ProviderConfig => {
 	const recipientEmail = env.SUBMISSION_EMAIL || DEFAULT_SUBMISSION_EMAIL;
-	const configuredEndpoint = env.FLOWFORM_ENDPOINT?.trim() || env.FORM_PROVIDER_ENDPOINT?.trim();
-	const configuredToken = env.FLOWFORM_TOKEN?.trim() || env.FORM_PROVIDER_TOKEN?.trim();
-	const endpoint = configuredEndpoint || (configuredToken ? `https://flowform.to/f/${configuredToken}` : DEFAULT_FLOWFORM_ENDPOINT);
+	const endpoint = env.FREEFORM_ENDPOINT?.trim() || env.FORM_PROVIDER_ENDPOINT?.trim();
 
 	return {
 		endpoint,
 		recipientEmail,
-		usesDashboardEndpoint: endpoint.includes("/f/"),
+		usesFreeformEndpoint: Boolean(endpoint),
 	};
 };
 
@@ -166,10 +161,6 @@ async function saveSubmission(env: AppEnv, submission: SubmissionRecord) {
 function buildProviderFormData(submission: SubmissionRecord, originalFormData: FormData, config: ProviderConfig) {
 	const providerFormData = new FormData();
 
-	if (!config.usesDashboardEndpoint) {
-		providerFormData.append("_to", config.recipientEmail);
-	}
-
 	providerFormData.append("_subject", "New Creative Lock In invite request");
 	providerFormData.append("_replyto", submission.email);
 	providerFormData.append("event", EVENT_NAME);
@@ -192,11 +183,16 @@ function buildProviderFormData(submission: SubmissionRecord, originalFormData: F
 	return providerFormData;
 }
 
-async function sendSubmissionToFormProvider(
+async function sendSubmissionToFreeform(
 	submission: SubmissionRecord,
 	originalFormData: FormData,
 	config: ProviderConfig,
 ): Promise<EmailStatus> {
+	if (!config.endpoint) {
+		console.warn("Freeform endpoint is not configured; submission was saved to D1 only");
+		return "saved-only";
+	}
+
 	try {
 		const response = await fetch(config.endpoint, {
 			method: "POST",
@@ -205,13 +201,13 @@ async function sendSubmissionToFormProvider(
 		});
 
 		if (response.ok) {
-			return config.usesDashboardEndpoint ? "sent-to-dashboard" : "sent";
+			return "sent-to-freeform";
 		}
 
-		console.warn(`Form provider delivery returned ${response.status}`);
+		console.warn(`Freeform delivery returned ${response.status}`);
 		return "failed";
 	} catch (error) {
-		console.warn("Form provider delivery failed", error);
+		console.warn("Freeform delivery failed", error);
 		return "failed";
 	}
 }
@@ -239,7 +235,7 @@ async function handleSubmission(request: Request, env: AppEnv) {
 		});
 	}
 
-	const email = await sendSubmissionToFormProvider(submission, formData, config);
+	const email = await sendSubmissionToFreeform(submission, formData, config);
 
 	return new Response(renderHtml(submission, { kind: "success", email }, config.recipientEmail), {
 		headers: htmlHeaders,

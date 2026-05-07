@@ -11,7 +11,7 @@ export type SubmissionView = {
 	sponsorLevel?: string;
 };
 
-export type EmailStatus = "sent" | "sent-to-dashboard" | "failed";
+export type EmailStatus = "sent-to-freeform" | "saved-only" | "failed";
 
 export type SubmissionStatus =
 	| { kind: "success"; email: EmailStatus }
@@ -42,13 +42,13 @@ const submissionNotice = (submission?: SubmissionView, status?: SubmissionStatus
 
 	if (status.kind === "success") {
 		const emailMessage =
-			status.email === "sent-to-dashboard"
-				? "The form was also sent to the FlowForm/FoxFlow dashboard with the uploaded file attached when supported by your plan."
-				: status.email === "sent"
-					? `The form was also forwarded to <strong>${organizerEmail}</strong> with the uploaded file attached when supported by the provider.`
-					: `Your request was saved, but the form provider did not confirm delivery. Please also email <strong>${organizerEmail}</strong> so nothing is missed.`;
+			status.email === "sent-to-freeform"
+				? "The form was also sent to your Freeform dashboard with the uploaded file attached when supported by your Freeform plan."
+				: status.email === "saved-only"
+					? `Your request was saved, but Freeform is not connected yet. Please also email <strong>${organizerEmail}</strong> so nothing is missed.`
+					: `Your request was saved, but Freeform did not confirm delivery. Please also email <strong>${organizerEmail}</strong> so nothing is missed.`;
 
-		return `<div class="notice ${status.email === "failed" ? "warning" : "success"}" role="status">
+		return `<div class="notice ${status.email === "sent-to-freeform" ? "success" : "warning"}" role="status">
 			<strong>Thank you${name ? `, ${name}` : ""}!</strong>
 			<span>Your request has been received. ${emailMessage}</span>
 			<small>Email: ${email || "provided"} · Lane: ${role} · Upload: ${fileName} · Sponsorship: ${sponsorship} · Media consent: ${mediaConsent}</small>
@@ -225,7 +225,7 @@ export function renderHtml(submission?: SubmissionView, status?: SubmissionStatu
 			<aside class="card form-card" id="apply">
 				${submissionNotice(submission, status, organizerEmail)}
 				<h2>Request your invitation</h2>
-				<p>This active form saves requests to the event database and forwards the details to the connected form provider. Uploads are sent with the submission when the provider endpoint and plan support file attachments.</p>
+				<p>This active form saves requests to the event database and forwards the details to your connected Freeform endpoint. Uploads are sent with the submission when your Freeform endpoint and plan support file attachments.</p>
 
 				<form method="POST" enctype="multipart/form-data">
 					<div class="two">
@@ -293,7 +293,7 @@ export function renderHtml(submission?: SubmissionView, status?: SubmissionStatu
 
 					<button class="button" type="submit">Submit request</button>
 				</form>
-				<p class="footer-note">For FlowForm/FoxFlow dashboard delivery, set a FLOWFORM_TOKEN or FLOWFORM_ENDPOINT secret on the Worker. If the form provider is not verified yet, this page still saves the request and asks applicants to email ${organizerEmail} directly as a backup.</p>
+				<p class="footer-note">For Freeform dashboard delivery, set a FREEFORM_ENDPOINT secret on the Worker. If Freeform is not connected yet, this page still saves the request and asks applicants to email ${organizerEmail} directly as a backup.</p>
 			</aside>
 		</main>
 	</div>
