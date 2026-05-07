@@ -1,59 +1,87 @@
-# Worker + D1 Database
+# 1 Soundvibe Studios Intern Intake System
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow for 1 Soundvibe Studios interns. It gives Rere a public candidate intake form, an admin tracker, weekly reporting tools, CSV export for Google Sheets, and an optional Google Drive file-sync bridge for resumes and portfolios.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+## What It Does
 
-<!-- dash-content-start -->
+- Collects candidate name, email, phone, desired role, resume upload, portfolio/work samples, portfolio links, weekly availability, and notes.
+- Seeds the tracker with the current priority intern list for Rere and Brittany / BB Management to manage.
+- Tracks the required columns: candidate name, email, desired role, resume received, portfolio received, interview status, notes, and final placement.
+- Supports statuses: New Lead, Resume Requested, Resume Received, Interview Scheduled, Interview Completed, Accepted, Not Selected, and Future Consideration.
+- Stores candidates and activity logs in Cloudflare D1.
+- Exports the tracker as CSV for Google Sheets.
+- Uploads files to Google Drive when a Google Apps Script webhook is configured.
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+## Important Routes
 
-```SQL
-SELECT * FROM comments LIMIT 3;
-```
+| Route | Purpose |
+| --- | --- |
+| `/` | Public intern intake form for new candidates. |
+| `/admin` | Rere's admin tracker and weekly update dashboard. |
+| `/api/candidates` | JSON feed of stats and candidates for integrations. |
+| `/export.csv` | CSV export for Google Sheets / Google Drive workflows. |
+| `/google-drive-setup` | Google Apps Script setup instructions for Drive uploads. |
 
-The D1 database is initialized with a `comments` table and this data:
+## Local Setup
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
-```
+1. Install dependencies:
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
-
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
-```
-
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
-
-## Setup Steps
-
-1. Install the project dependencies with a package manager of your choice:
    ```bash
    npm install
    ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
+
+2. Apply local D1 migrations:
+
    ```bash
-   npx wrangler d1 create d1-template-database
+   npx wrangler d1 migrations apply DB --local
    ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
+
+3. Start local development:
+
    ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
+   npm run dev
    ```
-4. Deploy the project!
+
+4. Open the local Worker URL shown by Wrangler.
+
+## Google Drive Connection
+
+Cloudflare Workers cannot access your Google Drive unless you provide a Google-side endpoint. This app uses a Google Apps Script web app as that bridge.
+
+1. Visit `/google-drive-setup` in the deployed app.
+2. Copy the provided Google Apps Script into a new Apps Script project while signed into the Google account that owns the Drive folder.
+3. Change the script's shared secret to a long private value.
+4. Deploy the script as a web app and copy its web app URL.
+5. Store the values as Worker secrets:
+
    ```bash
-   npx wrangler deploy
+   npx wrangler secret put GOOGLE_DRIVE_WEBHOOK_URL
+   npx wrangler secret put GOOGLE_DRIVE_SHARED_SECRET
+   npx wrangler secret put ADMIN_TOKEN
    ```
+
+When configured, new resume and portfolio uploads are copied into candidate-specific folders under `1 Soundvibe Studios Intern Intake` in Google Drive, and returned Drive links are saved in D1.
+
+## Deployment
+
+1. Apply migrations to the remote D1 database:
+
+   ```bash
+   npx wrangler d1 migrations apply DB --remote
+   ```
+
+2. Deploy the Worker:
+
+   ```bash
+   npm run deploy
+   ```
+
+## Intern Intake Operating Flow
+
+- **Monday:** Rere updates the intern tracker and sends follow-up messages.
+- **Tuesday:** Rere schedules interviews and confirms resumes.
+- **Wednesday:** Brittany helps with reminders and communication.
+- **Thursday:** Group interviews or individual follow-ups happen.
+- **Friday:** Rere sends Lafayette the weekly intern update from the admin dashboard.
+
+Rere should organize, contact, screen, schedule, and report. Lafayette Taylor should retain final acceptance authority.
