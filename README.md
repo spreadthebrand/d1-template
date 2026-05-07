@@ -1,11 +1,16 @@
 # CCB Network — Connect, Create, & Build
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftoptierprnews-source%2Fccb-worldwide.git&project-name=ccb-worldwide&repository-name=ccb-worldwide)
 
 
 CCB Network is an original full-stack streaming-network launch platform for creators, churches, podcasters, educators, indie filmmakers, brands, and community organizations. It starts as a free/low-cost web distribution MVP and is structured to scale later into cloud storage, payments, email, Roku, Fire TV, Apple TV, Android TV, mobile apps, FAST, IPTV, and subscriptions.
 
 > The MVP intentionally does **not** claim instant publishing to Roku, Fire TV, Apple TV, or other third-party platforms. Connected-TV distribution is a roadmap phase that can require developer accounts, platform approval, app builds, compliance, technical packaging, and fees.
+
+## Repository
+
+- GitHub: <https://github.com/toptierprnews-source/ccb-worldwide.git>
+- Vercel deploy: <https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftoptierprnews-source%2Fccb-worldwide.git&project-name=ccb-worldwide&repository-name=ccb-worldwide>
 
 ## Stack
 
@@ -25,9 +30,9 @@ CCB Network is an original full-stack streaming-network launch platform for crea
 
 This repository is now a full Next.js + Prisma + PostgreSQL application, not a Cloudflare Workers/D1 template. Use a standard Next.js host such as Vercel, Netlify, Render, Railway, or Cloudflare Pages with a Next.js adapter, connect a managed PostgreSQL database, and set the environment variables from `.env.example`.
 
-1. Push the repository to GitHub, GitLab, or Bitbucket.
+1. Use the GitHub repository at `https://github.com/toptierprnews-source/ccb-worldwide.git`. If you are working locally, push this code there before deployment.
 2. Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.
-3. Import the repository into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template. If you use Vercel CLI, run `npm run deploy:vercel` after authenticating.
+3. Import `toptierprnews-source/ccb-worldwide` into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template. If you use Vercel CLI, run `npm run deploy:vercel` after authenticating.
 4. Add `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the hosting provider environment settings.
 5. Deploy the site, then run `npm run db:deploy` and `npm run prisma:seed` once against the production database. The initial Prisma migration is committed under `prisma/migrations/20260507162000_init`.
 6. Visit `/deploy` in the application for an in-app deployment checklist.

@@ -11,10 +11,13 @@ const envGroups = [
   }
 ];
 
+const githubUrl = "https://github.com/toptierprnews-source/ccb-worldwide.git";
+const vercelDeployUrl = "https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftoptierprnews-source%2Fccb-worldwide.git&project-name=ccb-worldwide&repository-name=ccb-worldwide";
+
 const steps = [
-  "Push this repository to GitHub, GitLab, or Bitbucket.",
+  "Use the GitHub repository at toptierprnews-source/ccb-worldwide and push the latest code before deployment.",
   "Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.",
-  "Import the repository into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template.",
+  "Import toptierprnews-source/ccb-worldwide into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template.",
   "Add the environment variables from .env.example in the hosting dashboard.",
   "Deploy the app, then run prisma migrate deploy and npm run prisma:seed once from your workstation or CI.",
   "Sign in at /admin/login with the configured admin account and replace all seeded credentials before public launch."
@@ -29,7 +32,8 @@ export default function DeployPage() {
         CCB Network is deploy-ready for a standard Next.js host such as Vercel, Netlify, Render, Railway, or Cloudflare Pages. It is not a Cloudflare Workers/D1 app. The production app needs PostgreSQL and secure environment variables; paid integrations remain optional until you enable them.
       </p>
       <div className="mt-8 flex flex-wrap gap-4">
-        <a className="btn-primary" href="https://vercel.com/new" target="_blank" rel="noreferrer">Deploy on Vercel</a>
+        <a className="btn-primary" href={vercelDeployUrl} target="_blank" rel="noreferrer">Deploy this GitHub repo</a>
+        <a className="btn-secondary" href={githubUrl} target="_blank" rel="noreferrer">View GitHub</a>
         <Link className="btn-secondary" href="/apply">Launch a Network</Link>
       </div>
 
