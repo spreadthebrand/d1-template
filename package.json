@@ -8,9 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "db:deploy": "prisma migrate deploy",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "deploy:preview": "npx vercel",
+    "deploy:vercel": "npx vercel --prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

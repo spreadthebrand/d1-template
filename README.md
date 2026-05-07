@@ -1,5 +1,8 @@
 # CCB Network — Connect, Create, & Build
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+
 CCB Network is an original full-stack streaming-network launch platform for creators, churches, podcasters, educators, indie filmmakers, brands, and community organizations. It starts as a free/low-cost web distribution MVP and is structured to scale later into cloud storage, payments, email, Roku, Fire TV, Apple TV, Android TV, mobile apps, FAST, IPTV, and subscriptions.
 
 > The MVP intentionally does **not** claim instant publishing to Roku, Fire TV, Apple TV, or other third-party platforms. Connected-TV distribution is a roadmap phase that can require developer accounts, platform approval, app builds, compliance, technical packaging, and fees.
@@ -17,6 +20,19 @@ CCB Network is an original full-stack streaming-network launch platform for crea
 - Local-first upload/storage structure with S3-compatible placeholders
 - Stripe-ready placeholders
 - REST API routes
+
+## Deploy to production
+
+The previous Cloudflare D1 template deploy button is no longer appropriate because this project is now a full Next.js + Prisma + PostgreSQL application. Use a standard Next.js host such as Vercel, connect a managed PostgreSQL database, and set the environment variables from `.env.example`.
+
+1. Push the repository to GitHub, GitLab, or Bitbucket.
+2. Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.
+3. Import the repository into Vercel as a Next.js project, or run `npm run deploy:vercel` after authenticating with Vercel CLI.
+4. Add `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the hosting provider environment settings.
+5. Deploy the site, then run `npm run db:deploy` and `npm run prisma:seed` once against the production database.
+6. Visit `/deploy` in the application for an in-app deployment checklist.
+
+The included `vercel.json` makes the project show as a Next.js deployment and uses `npm run build`.
 
 ## Local setup
 
@@ -79,6 +95,7 @@ Change all seeded passwords before any public deployment.
 - `/start`
 - `/distribution`
 - `/pricing`
+- `/deploy`
 - `/apply`
 - `/networks`
 - `/networks/[slug]`
@@ -164,6 +181,7 @@ Each future platform can require developer accounts, branding assets, metadata, 
 ```bash
 npm run typecheck
 npm run build
+npm run db:deploy
 ```
 
 Run these after changing schema, routes, or UI components.
