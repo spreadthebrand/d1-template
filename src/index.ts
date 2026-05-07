@@ -1,14 +1,20 @@
-import { renderHtml } from "./renderHtml";
+import { handleApi } from "./api";
+import { pageFromPath, renderPage } from "./renderHtml";
 
 export default {
-	async fetch(request, env) {
-		const stmt = env.DB.prepare("SELECT * FROM comments LIMIT 3");
-		const { results } = await stmt.all();
+  async fetch(request, env) {
+    const url = new URL(request.url);
 
-		return new Response(renderHtml(JSON.stringify(results, null, 2)), {
-			headers: {
-				"content-type": "text/html",
-			},
-		});
-	},
+    if (url.pathname.startsWith("/api/")) {
+      return handleApi(request, env);
+    }
+
+    const page = pageFromPath(url.pathname);
+    return new Response(renderPage(page, url.pathname), {
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "x-content-type-options": "nosniff",
+      },
+    });
+  },
 } satisfies ExportedHandler<Env>;
