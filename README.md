@@ -100,7 +100,7 @@ Every signal returns:
 
 ## Deployment notes
 
-This repository started from a Cloudflare D1 template, but the app itself uses browser LocalStorage for the trading journal and settings. The existing Worker configuration remains deployable to Cloudflare. No Supabase or broker integration is required.
+The app uses browser LocalStorage for the trading journal and settings. The Worker configuration has no database binding and is deployable to Cloudflare Workers without Supabase, D1, or broker integration.
 
 ## Live data roadmap
 

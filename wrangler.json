@@ -1,15 +1,8 @@
 {
 	"compatibility_date": "2025-10-08",
 	"main": "src/index.ts",
-	"name": "d1-template",
+	"name": "one-sv-fast-trade-ai",
 	"upload_source_maps": true,
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_id": "0216b900-b66d-4e3b-904a-bab7e9890307",
-			"database_name": "d1-template-database"
-		}
-	],
 	"observability": {
 		"enabled": true
 	}
