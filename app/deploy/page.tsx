@@ -14,7 +14,7 @@ const envGroups = [
 const steps = [
   "Push this repository to GitHub, GitLab, or Bitbucket.",
   "Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.",
-  "Import the repository into Vercel as a Next.js project.",
+  "Import the repository into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template.",
   "Add the environment variables from .env.example in the hosting dashboard.",
   "Deploy the app, then run prisma migrate deploy and npm run prisma:seed once from your workstation or CI.",
   "Sign in at /admin/login with the configured admin account and replace all seeded credentials before public launch."
@@ -26,7 +26,7 @@ export default function DeployPage() {
       <p className="font-bold uppercase tracking-[.25em] text-gold">Deploy CCB Network</p>
       <h1 className="mt-4 max-w-4xl text-5xl font-black leading-tight md:text-6xl">Deploy the web-first streaming MVP to production</h1>
       <p className="mt-6 max-w-3xl text-xl text-slate-300">
-        CCB Network is deploy-ready for a standard Next.js host such as Vercel. The production app needs PostgreSQL and secure environment variables; paid integrations remain optional until you enable them.
+        CCB Network is deploy-ready for a standard Next.js host such as Vercel, Netlify, Render, Railway, or Cloudflare Pages. It is not a Cloudflare Workers/D1 app. The production app needs PostgreSQL and secure environment variables; paid integrations remain optional until you enable them.
       </p>
       <div className="mt-8 flex flex-wrap gap-4">
         <a className="btn-primary" href="https://vercel.com/new" target="_blank" rel="noreferrer">Deploy on Vercel</a>

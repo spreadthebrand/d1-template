@@ -23,16 +23,21 @@ CCB Network is an original full-stack streaming-network launch platform for crea
 
 ## Deploy to production
 
-The previous Cloudflare D1 template deploy button is no longer appropriate because this project is now a full Next.js + Prisma + PostgreSQL application. Use a standard Next.js host such as Vercel, connect a managed PostgreSQL database, and set the environment variables from `.env.example`.
+This repository is now a full Next.js + Prisma + PostgreSQL application, not a Cloudflare Workers/D1 template. Use a standard Next.js host such as Vercel, Netlify, Render, Railway, or Cloudflare Pages with a Next.js adapter, connect a managed PostgreSQL database, and set the environment variables from `.env.example`.
 
 1. Push the repository to GitHub, GitLab, or Bitbucket.
 2. Create a PostgreSQL database with Neon, Supabase, Railway, Render, Vercel Postgres, or another managed provider.
-3. Import the repository into Vercel as a Next.js project, or run `npm run deploy:vercel` after authenticating with Vercel CLI.
+3. Import the repository into Vercel or another Next.js host as a Next.js project, not as a Workers/D1 template. If you use Vercel CLI, run `npm run deploy:vercel` after authenticating.
 4. Add `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in the hosting provider environment settings.
 5. Deploy the site, then run `npm run db:deploy` and `npm run prisma:seed` once against the production database. The initial Prisma migration is committed under `prisma/migrations/20260507162000_init`.
 6. Visit `/deploy` in the application for an in-app deployment checklist.
 
-The included `vercel.json` makes the project show as a Next.js deployment and uses `npm run build`. The build script supplies safe build-time placeholders for `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` so dependency generation does not fail before production environment variables are attached; real runtime values are still required before launch.
+The old `wrangler.json`, Worker type file, and D1 sample migrations have been removed so hosts do not detect this as a Workers + D1 template. The included `vercel.json` makes the project show as a Next.js deployment and uses `npm run build`. The build script supplies safe build-time placeholders for `DATABASE_URL`, `NEXTAUTH_SECRET`, and `NEXTAUTH_URL` so dependency generation does not fail before production environment variables are attached; real runtime values are still required before launch.
+
+
+### If Cloudflare still shows Workers/D1
+
+Create a **Cloudflare Pages** project, not a Workers + D1 deployment. Set the build command to `npm run build`, the output directory to `.next` when using an adapter, and attach PostgreSQL through `DATABASE_URL`. Do not use the old Workers/D1 template flow for this repository.
 
 ## Local setup
 
