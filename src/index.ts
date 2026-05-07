@@ -1,14 +1,794 @@
-import { renderHtml } from "./renderHtml";
+import { renderAdmin, renderAdminLogin, renderDriveSetup, renderIntakeForm, renderSuccess } from "./renderHtml";
 
-export default {
-	async fetch(request, env) {
-		const stmt = env.DB.prepare("SELECT * FROM comments LIMIT 3");
-		const { results } = await stmt.all();
+type InternCandidate = {
+	id: number;
+	candidate_name: string;
+	email: string | null;
+	phone: string | null;
+	desired_role: string;
+	resume_received: string;
+	portfolio_received: string;
+	interview_status: string;
+	notes: string;
+	final_placement: string;
+	weekly_availability: string;
+	portfolio_url: string;
+	resume_file_name: string;
+	portfolio_file_name: string;
+	google_drive_resume_url: string;
+	google_drive_portfolio_url: string;
+	trial_assignment: string;
+	priority_level: string;
+	source: string;
+	created_at: string;
+	updated_at: string;
+	last_contacted_at: string | null;
+	cloudflare_files?: string;
+};
 
-		return new Response(renderHtml(JSON.stringify(results, null, 2)), {
+type DashboardStats = {
+	total: number;
+	resumesReceived: number;
+	pendingResumes: number;
+	interviewsScheduled: number;
+	accepted: number;
+	googleDriveConnected: boolean;
+	cloudflareFiles: number;
+	webhookEvents: number;
+};
+
+type IntegrationSettings = {
+	googleDriveWebhookUrl: string;
+	googleDriveSharedSecretConfigured: boolean;
+	notificationWebhookUrl: string;
+	notificationWebhookConfigured: boolean;
+	inboundWebhookSecretConfigured: boolean;
+};
+
+type DriveUploadResult = {
+	fileName: string;
+	webViewLink: string;
+};
+
+type DriveSyncResult = {
+	resume?: DriveUploadResult;
+	portfolio?: DriveUploadResult;
+};
+
+type PreparedUpload = {
+	kind: string;
+	fileName: string;
+	contentType: string;
+	size: number;
+	data: string;
+};
+
+type SeedCandidate = {
+	candidateName: string;
+	email?: string;
+	desiredRole: string;
+	resumeReceived: "Yes" | "No";
+	portfolioReceived: "Yes" | "No";
+	interviewStatus: string;
+	notes: string;
+	priorityLevel: string;
+};
+
+const STATUS_OPTIONS = [
+	"New Lead",
+	"Resume Requested",
+	"Resume Received",
+	"Interview Scheduled",
+	"Interview Completed",
+	"Accepted",
+	"Not Selected",
+	"Future Consideration",
+] as const;
+
+const ROLE_TRIAL_ASSIGNMENTS: Record<string, string> = {
+	Marketing: "Create 3 promo ideas for 1 Soundvibe Studios.",
+	"Graphic Design": "Create 1 sample flyer or social media post.",
+	Photography: "Submit 5 best photos or a portfolio link.",
+	"Studio Staff": "Explain how you would help set up a vocal session.",
+	"A&R": "Submit 3 Houston artists you think 1SV should watch.",
+	Producer: "Submit 3 beats or production samples.",
+	Content: "Submit 2 short-form video ideas for the studio.",
+};
+
+const CURRENT_CANDIDATES: SeedCandidate[] = [
+	{ candidateName: "Devon L. Barnett", desiredRole: "Graphic Design Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: only graphic design candidate. Contact immediately and request resume plus design samples.", priorityLevel: "Highest" },
+	{ candidateName: "Tycian White", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: best direct match for photography. Request portfolio/sample work and schedule interview.", priorityLevel: "Highest" },
+	{ candidateName: "William Williams", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: strongest fit for artist-facing marketing. Request resume and schedule interview.", priorityLevel: "Highest" },
+	{ candidateName: "Elijah Victorian", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "Resume Requested", notes: "Highest priority: artist/producer/engineer background. Request resume, portfolio, and music links.", priorityLevel: "Highest" },
+	{ candidateName: "Robert Garcia", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Strong studio support candidate. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Ralph Onwumere", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Audio engineer background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Cesar Sifuentes", desiredRole: "Studio Staff Intern", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. HCC audio engineering background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Madeline Herrera", desiredRole: "Studio Staff / Broadcast Support", resumeReceived: "Yes", portfolioReceived: "No", interviewStatus: "Resume Received", notes: "Highest priority: resume received. Radio broadcast/master engineering background. Schedule group interview.", priorityLevel: "Highest" },
+	{ candidateName: "Meaux Melody", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Brandon Molina", desiredRole: "Marketing Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Kareem Alsabur", desiredRole: "Marketing / Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Marketing and producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Alan Jackson", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Keenon Taylor II", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Eduardo Primera", desiredRole: "A&R Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "A&R backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Jonah Donnell", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Photography backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Esperanza Nolasco", desiredRole: "Photography Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Photography backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Mason Richards", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Top producer candidate. Request beat links/music samples.", priorityLevel: "High" },
+	{ candidateName: "Trevin Richards", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Top producer candidate. Request beat links/music samples.", priorityLevel: "High" },
+	{ candidateName: "Jordan Moreno", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Donye Tolbert", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Anthony Chavarria", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+	{ candidateName: "Martarius Bolden", desiredRole: "Producer Intern", resumeReceived: "No", portfolioReceived: "No", interviewStatus: "New Lead", notes: "Producer backup candidate.", priorityLevel: "Backup" },
+];
+
+
+function htmlResponse(html: string, init: ResponseInit = {}) {
+	return new Response(html, {
+		...init,
+		headers: {
+			"content-type": "text/html; charset=UTF-8",
+			...init.headers,
+		},
+	});
+}
+
+function jsonResponse(data: unknown, init: ResponseInit = {}) {
+	return new Response(JSON.stringify(data, null, 2), {
+		...init,
+		headers: {
+			"content-type": "application/json; charset=UTF-8",
+			...init.headers,
+		},
+	});
+}
+
+function redirect(location: string) {
+	return new Response(null, {
+		status: 303,
+		headers: { location },
+	});
+}
+
+function getEnvValue(env: Env, key: string): string {
+	const value = (env as unknown as Record<string, string | undefined>)[key];
+	return typeof value === "string" ? value.trim() : "";
+}
+
+function getStorageLabel(): string {
+	return "Cloudflare D1 tables intern_candidates, intern_files, intern_activity_log, integration_settings, and webhook_events";
+}
+
+function getSuppliedAdminToken(request: Request): string {
+	const url = new URL(request.url);
+	return url.searchParams.get("token") ?? request.headers.get("x-admin-token") ?? "";
+}
+
+function getAdminQuery(request: Request): string {
+	const token = getSuppliedAdminToken(request);
+	return token ? `?token=${encodeURIComponent(token)}` : "";
+}
+
+function isAdmin(request: Request, env: Env): boolean {
+	const token = getEnvValue(env, "ADMIN_TOKEN");
+	if (!token) {
+		return false;
+	}
+	return getSuppliedAdminToken(request) === token;
+}
+
+function requireAdmin(request: Request, env: Env): Response | undefined {
+	if (isAdmin(request, env)) {
+		return undefined;
+	}
+	return htmlResponse(renderAdminLogin(Boolean(getEnvValue(env, "ADMIN_TOKEN"))), { status: 401 });
+}
+
+function safeString(value: string | File | null): string {
+	return typeof value === "string" ? value.trim() : "";
+}
+
+function boolToYesNo(value: boolean): "Yes" | "No" {
+	return value ? "Yes" : "No";
+}
+
+function inferTrialAssignment(role: string): string {
+	const normalizedRole = role.toLowerCase();
+	const match = Object.entries(ROLE_TRIAL_ASSIGNMENTS).find(([key]) => normalizedRole.includes(key.toLowerCase()));
+	return match?.[1] ?? "Bring examples of your work and explain how you would support 1 Soundvibe Studios.";
+}
+
+function csvEscape(value: unknown): string {
+	const stringValue = value === null || value === undefined ? "" : String(value);
+	return `"${stringValue.replaceAll('"', '""')}"`;
+}
+
+function toCsv(candidates: InternCandidate[]): string {
+	const headers = [
+		"Candidate Name",
+		"Email",
+		"Phone",
+		"Desired Role",
+		"Resume Received",
+		"Portfolio Received",
+		"Interview Status",
+		"Notes",
+		"Final Placement",
+		"Weekly Availability",
+		"Portfolio URL",
+		"Google Drive Resume URL",
+		"Google Drive Portfolio URL",
+		"Trial Assignment",
+		"Priority Level",
+		"Last Contacted At",
+		"Created At",
+		"Updated At",
+	];
+	const rows = candidates.map((candidate) => [
+		candidate.candidate_name,
+		candidate.email,
+		candidate.phone,
+		candidate.desired_role,
+		candidate.resume_received,
+		candidate.portfolio_received,
+		candidate.interview_status,
+		candidate.notes,
+		candidate.final_placement,
+		candidate.weekly_availability,
+		candidate.portfolio_url,
+		candidate.google_drive_resume_url,
+		candidate.google_drive_portfolio_url,
+		candidate.trial_assignment,
+		candidate.priority_level,
+		candidate.last_contacted_at,
+		candidate.created_at,
+		candidate.updated_at,
+	]);
+	return [headers, ...rows].map((row) => row.map(csvEscape).join(",")).join("\n");
+}
+
+async function fileToBase64(file: File): Promise<string> {
+	const bytes = new Uint8Array(await file.arrayBuffer());
+	let binary = "";
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+	return btoa(binary);
+}
+
+function base64ToBytes(data: string): Uint8Array {
+	const binary = atob(data);
+	const bytes = new Uint8Array(binary.length);
+	for (let index = 0; index < binary.length; index++) {
+		bytes[index] = binary.charCodeAt(index);
+	}
+	return bytes;
+}
+
+async function prepareUploads(files: { resume?: File; portfolio?: File }): Promise<PreparedUpload[]> {
+	return Promise.all(
+		Object.entries(files)
+			.filter(([, file]) => file instanceof File && file.size > 0)
+			.map(async ([kind, file]) => ({
+				kind,
+				fileName: file.name,
+				contentType: file.type || "application/octet-stream",
+				size: file.size,
+				data: await fileToBase64(file),
+			})),
+	);
+}
+
+async function getConfiguredValue(env: Env, key: string, envKey: string): Promise<string> {
+	await ensureInternTables(env);
+	const row = await env.DB.prepare("SELECT setting_value FROM integration_settings WHERE setting_key = ?").bind(key).first<{ setting_value: string }>();
+	return (row?.setting_value || getEnvValue(env, envKey)).trim();
+}
+
+async function getIntegrationSettings(env: Env): Promise<IntegrationSettings> {
+	return {
+		googleDriveWebhookUrl: await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL"),
+		googleDriveSharedSecretConfigured: Boolean(await getConfiguredValue(env, "google_drive_shared_secret", "GOOGLE_DRIVE_SHARED_SECRET")),
+		notificationWebhookUrl: await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL"),
+		notificationWebhookConfigured: Boolean(await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL")),
+		inboundWebhookSecretConfigured: Boolean(await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET")),
+	};
+}
+
+async function uploadFilesToGoogleDrive(env: Env, candidateName: string, uploads: PreparedUpload[]): Promise<DriveSyncResult> {
+	const webhookUrl = await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL");
+	if (!webhookUrl || uploads.length === 0) {
+		return {};
+	}
+
+	const sharedSecret = await getConfiguredValue(env, "google_drive_shared_secret", "GOOGLE_DRIVE_SHARED_SECRET");
+	const driveResponse = await fetch(webhookUrl, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({
+			sharedSecret,
+			candidateName,
+			folderName: "1 Soundvibe Studios Intern Intake",
+			uploads,
+		}),
+	});
+
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('outbound', 'google_drive', 'file_upload', ?, ?)")
+		.bind(driveResponse.ok ? "success" : "failed", JSON.stringify({ candidateName, status: driveResponse.status }))
+		.run();
+
+	if (!driveResponse.ok) {
+		return {};
+	}
+
+	return (await driveResponse.json()) as DriveSyncResult;
+}
+
+async function notifyIntakeWebhook(env: Env, candidate: Record<string, unknown>): Promise<void> {
+	const webhookUrl = await getConfiguredValue(env, "notification_webhook_url", "NOTIFICATION_WEBHOOK_URL");
+	if (!webhookUrl) {
+		return;
+	}
+	const sharedSecret = await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET");
+	const response = await fetch(webhookUrl, {
+		method: "POST",
+		headers: { "content-type": "application/json", ...(sharedSecret ? { "x-1sv-webhook-secret": sharedSecret } : {}) },
+		body: JSON.stringify({ event: "intern_intake.created", storage: getStorageLabel(), candidate }),
+	});
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('outbound', 'notification', 'intern_intake.created', ?, ?)")
+		.bind(response.ok ? "success" : "failed", JSON.stringify({ status: response.status, candidate }))
+		.run();
+}
+
+
+async function ensureInternTables(env: Env): Promise<void> {
+	await env.DB.batch([
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_candidates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_name TEXT NOT NULL,
+			email TEXT,
+			phone TEXT,
+			desired_role TEXT NOT NULL DEFAULT 'New Lead',
+			resume_received TEXT NOT NULL DEFAULT 'No',
+			portfolio_received TEXT NOT NULL DEFAULT 'No',
+			interview_status TEXT NOT NULL DEFAULT 'New Lead',
+			notes TEXT NOT NULL DEFAULT '',
+			final_placement TEXT NOT NULL DEFAULT '',
+			weekly_availability TEXT NOT NULL DEFAULT '',
+			portfolio_url TEXT NOT NULL DEFAULT '',
+			resume_file_name TEXT NOT NULL DEFAULT '',
+			portfolio_file_name TEXT NOT NULL DEFAULT '',
+			google_drive_resume_url TEXT NOT NULL DEFAULT '',
+			google_drive_portfolio_url TEXT NOT NULL DEFAULT '',
+			trial_assignment TEXT NOT NULL DEFAULT '',
+			priority_level TEXT NOT NULL DEFAULT 'Normal',
+			source TEXT NOT NULL DEFAULT 'Intern Intake Form',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_contacted_at TEXT,
+			UNIQUE(candidate_name, desired_role)
+		)`),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_status ON intern_candidates(interview_status)"),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_role ON intern_candidates(desired_role)"),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_candidates_priority ON intern_candidates(priority_level)"),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_activity_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_id INTEGER,
+			action TEXT NOT NULL,
+			details TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(candidate_id) REFERENCES intern_candidates(id) ON DELETE CASCADE
+		)`),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS intern_files (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			candidate_id INTEGER NOT NULL,
+			file_kind TEXT NOT NULL,
+			file_name TEXT NOT NULL,
+			content_type TEXT NOT NULL,
+			file_size INTEGER NOT NULL DEFAULT 0,
+			base64_data TEXT NOT NULL,
+			google_drive_url TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(candidate_id) REFERENCES intern_candidates(id) ON DELETE CASCADE
+		)`),
+		env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_intern_files_candidate ON intern_files(candidate_id)"),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS integration_settings (
+			setting_key TEXT PRIMARY KEY,
+			setting_value TEXT NOT NULL DEFAULT '',
+			updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`),
+		env.DB.prepare(`CREATE TABLE IF NOT EXISTS webhook_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			direction TEXT NOT NULL,
+			provider TEXT NOT NULL,
+			event_type TEXT NOT NULL,
+			status TEXT NOT NULL,
+			payload TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`),
+	]);
+
+	const existing = await env.DB.prepare("SELECT COUNT(*) AS total FROM intern_candidates").first<{ total: number }>();
+	if ((existing?.total ?? 0) > 0) {
+		return;
+	}
+
+	await env.DB.batch(CURRENT_CANDIDATES.map((candidate) => env.DB.prepare(`
+		INSERT OR IGNORE INTO intern_candidates
+		(candidate_name, email, desired_role, resume_received, portfolio_received, interview_status, notes, priority_level, source, trial_assignment)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Initial intern placement report', ?)
+	`).bind(
+		candidate.candidateName,
+		candidate.email ?? "",
+		candidate.desiredRole,
+		candidate.resumeReceived,
+		candidate.portfolioReceived,
+		candidate.interviewStatus,
+		candidate.notes,
+		candidate.priorityLevel,
+		inferTrialAssignment(candidate.desiredRole),
+	)));
+}
+
+function parseImportLine(line: string): SeedCandidate | undefined {
+	const trimmed = line.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	const cells = trimmed.includes(",") ? trimmed.split(",").map((cell) => cell.trim()) : trimmed.split(/\s+[—-]\s+/).map((cell) => cell.trim());
+	const candidateName = cells[0] ?? "";
+	const email = trimmed.includes(",") ? cells[1] ?? "" : "";
+	const desiredRole = cells[2] && trimmed.includes(",") ? cells[2] : cells[1] ?? "New Lead";
+	if (!candidateName || candidateName.toLowerCase() === "candidate name" || candidateName.toLowerCase() === "name") {
+		return undefined;
+	}
+	return {
+		candidateName,
+		email,
+		desiredRole: desiredRole || "New Lead",
+		resumeReceived: cells[3]?.toLowerCase() === "yes" ? "Yes" : "No",
+		portfolioReceived: cells[4]?.toLowerCase() === "yes" ? "Yes" : "No",
+		interviewStatus: STATUS_OPTIONS.includes(cells[5] as (typeof STATUS_OPTIONS)[number]) ? cells[5] as (typeof STATUS_OPTIONS)[number] : "New Lead",
+		notes: cells[6] ?? "Imported from current list.",
+		priorityLevel: "Normal",
+	};
+}
+
+async function listCandidates(env: Env): Promise<InternCandidate[]> {
+	await ensureInternTables(env);
+	const { results } = await env.DB.prepare(`
+		SELECT c.*, COALESCE(GROUP_CONCAT(f.id || '::' || f.file_kind || '::' || f.file_name, '||'), '') AS cloudflare_files
+		FROM intern_candidates c
+		LEFT JOIN intern_files f ON f.candidate_id = c.id
+		GROUP BY c.id
+		ORDER BY CASE c.priority_level WHEN 'Highest' THEN 0 WHEN 'High' THEN 1 WHEN 'Backup' THEN 2 ELSE 3 END, c.updated_at DESC, c.candidate_name ASC
+	`).all<InternCandidate>();
+	return results;
+}
+
+async function getStats(env: Env): Promise<DashboardStats> {
+	const candidates = await listCandidates(env);
+	const fileCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM intern_files").first<{ total: number }>();
+	const eventCount = await env.DB.prepare("SELECT COUNT(*) AS total FROM webhook_events").first<{ total: number }>();
+	return {
+		total: candidates.length,
+		resumesReceived: candidates.filter((candidate) => candidate.resume_received === "Yes").length,
+		pendingResumes: candidates.filter((candidate) => candidate.resume_received !== "Yes").length,
+		interviewsScheduled: candidates.filter((candidate) => candidate.interview_status === "Interview Scheduled").length,
+		accepted: candidates.filter((candidate) => candidate.interview_status === "Accepted" || candidate.final_placement).length,
+		googleDriveConnected: Boolean(await getConfiguredValue(env, "google_drive_webhook_url", "GOOGLE_DRIVE_WEBHOOK_URL")),
+		cloudflareFiles: fileCount?.total ?? 0,
+		webhookEvents: eventCount?.total ?? 0,
+	};
+}
+
+async function createCandidate(request: Request, env: Env): Promise<Response> {
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const candidateName = safeString(form.get("candidate_name"));
+	const desiredRole = safeString(form.get("desired_role"));
+	if (!candidateName || !desiredRole) {
+		return htmlResponse("<h1>Missing information</h1><p>Name and desired role are required.</p>", { status: 400 });
+	}
+
+	const resume = form.get("resume");
+	const portfolioFile = form.get("portfolio_file");
+	const resumeFile = resume instanceof File && resume.size > 0 ? resume : undefined;
+	const uploadedPortfolioFile = portfolioFile instanceof File && portfolioFile.size > 0 ? portfolioFile : undefined;
+	const uploads = await prepareUploads({ resume: resumeFile, portfolio: uploadedPortfolioFile });
+	const driveSync = await uploadFilesToGoogleDrive(env, candidateName, uploads);
+	const portfolioUrl = safeString(form.get("portfolio_url"));
+	const hasPortfolio = Boolean(portfolioUrl || uploadedPortfolioFile || driveSync.portfolio?.webViewLink);
+	const hasResume = Boolean(resumeFile || driveSync.resume?.webViewLink);
+	const trialAssignment = inferTrialAssignment(desiredRole);
+
+	const result = await env.DB.prepare(`
+		INSERT INTO intern_candidates (
+			candidate_name, email, phone, desired_role, resume_received, portfolio_received,
+			interview_status, notes, final_placement, weekly_availability, portfolio_url,
+			resume_file_name, portfolio_file_name, google_drive_resume_url, google_drive_portfolio_url,
+			trial_assignment, priority_level, source, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, 'Normal', 'Public intake form', CURRENT_TIMESTAMP)
+	`).bind(
+		candidateName,
+		safeString(form.get("email")),
+		safeString(form.get("phone")),
+		desiredRole,
+		boolToYesNo(hasResume),
+		boolToYesNo(hasPortfolio),
+		hasResume ? "Resume Received" : "Resume Requested",
+		safeString(form.get("notes")),
+		safeString(form.get("weekly_availability")),
+		portfolioUrl,
+		resumeFile?.name ?? "",
+		uploadedPortfolioFile?.name ?? "",
+		driveSync.resume?.webViewLink ?? "",
+		driveSync.portfolio?.webViewLink ?? "",
+		trialAssignment,
+	).run();
+
+	const candidateId = Number(result.meta.last_row_id);
+	for (const upload of uploads) {
+		const driveUrl = upload.kind === "resume" ? driveSync.resume?.webViewLink ?? "" : driveSync.portfolio?.webViewLink ?? "";
+		await env.DB.prepare(`
+			INSERT INTO intern_files (candidate_id, file_kind, file_name, content_type, file_size, base64_data, google_drive_url)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`).bind(candidateId, upload.kind, upload.fileName, upload.contentType, upload.size, upload.data, driveUrl).run();
+	}
+
+	await env.DB.prepare("INSERT INTO intern_activity_log (candidate_id, action, details) VALUES (?, 'Candidate submitted intake form', ?)")
+		.bind(candidateId, driveSync.resume || driveSync.portfolio ? "Stored candidate details/files in Cloudflare D1 and synced files to Google Drive." : "Stored candidate details and uploaded files in Cloudflare D1.")
+		.run();
+	await notifyIntakeWebhook(env, { id: candidateId, candidateName, desiredRole, email: safeString(form.get("email")) });
+
+	return htmlResponse(renderSuccess(candidateName, driveSync));
+}
+
+async function updateCandidate(request: Request, env: Env): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const id = Number(safeString(form.get("id")));
+	if (!Number.isInteger(id)) {
+		return htmlResponse("<h1>Invalid candidate</h1>", { status: 400 });
+	}
+	const interviewStatus = safeString(form.get("interview_status"));
+	if (!STATUS_OPTIONS.includes(interviewStatus as (typeof STATUS_OPTIONS)[number])) {
+		return htmlResponse("<h1>Invalid status</h1>", { status: 400 });
+	}
+
+	await env.DB.prepare(`
+		UPDATE intern_candidates
+		SET email = ?, phone = ?, desired_role = ?, resume_received = ?, portfolio_received = ?,
+			interview_status = ?, notes = ?, final_placement = ?, weekly_availability = ?,
+			portfolio_url = ?, trial_assignment = ?, priority_level = ?, last_contacted_at = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`).bind(
+		safeString(form.get("email")),
+		safeString(form.get("phone")),
+		safeString(form.get("desired_role")),
+		safeString(form.get("resume_received")) || "No",
+		safeString(form.get("portfolio_received")) || "No",
+		interviewStatus,
+		safeString(form.get("notes")),
+		safeString(form.get("final_placement")),
+		safeString(form.get("weekly_availability")),
+		safeString(form.get("portfolio_url")),
+		safeString(form.get("trial_assignment")),
+		safeString(form.get("priority_level")) || "Normal",
+		safeString(form.get("last_contacted_at")) || null,
+		id,
+	).run();
+
+	await env.DB.prepare("INSERT INTO intern_activity_log (candidate_id, action, details) VALUES (?, 'Candidate updated', ?)")
+		.bind(id, `Status changed to ${interviewStatus}.`)
+		.run();
+
+	return redirect(`/admin${getAdminQuery(request)}`);
+}
+
+async function importCandidates(request: Request, env: Env): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const lines = safeString(form.get("candidate_list")).split(/\r?\n/);
+	const candidates = lines.map(parseImportLine).filter((candidate): candidate is SeedCandidate => Boolean(candidate));
+	if (candidates.length === 0) {
+		return redirect(`/admin${getAdminQuery(request)}`);
+	}
+	await env.DB.batch(candidates.map((candidate) => env.DB.prepare(`
+		INSERT INTO intern_candidates
+		(candidate_name, email, desired_role, resume_received, portfolio_received, interview_status, notes, priority_level, source, trial_assignment, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Admin current-list import', ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(candidate_name, desired_role) DO UPDATE SET
+			interview_status = excluded.interview_status,
+			email = CASE WHEN intern_candidates.email IS NULL OR intern_candidates.email = '' THEN excluded.email ELSE intern_candidates.email END,
+			notes = CASE WHEN intern_candidates.notes = '' THEN excluded.notes ELSE intern_candidates.notes END,
+			updated_at = CURRENT_TIMESTAMP
+	`).bind(
+		candidate.candidateName,
+		candidate.email ?? "",
+		candidate.desiredRole,
+		candidate.resumeReceived,
+		candidate.portfolioReceived,
+		candidate.interviewStatus,
+		candidate.notes,
+		candidate.priorityLevel,
+		inferTrialAssignment(candidate.desiredRole),
+	)));
+	return redirect(`/admin${getAdminQuery(request)}`);
+}
+
+async function saveIntegrationSettings(request: Request, env: Env): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const form = await request.formData();
+	const settings = [
+		["google_drive_webhook_url", safeString(form.get("google_drive_webhook_url"))],
+		["notification_webhook_url", safeString(form.get("notification_webhook_url"))],
+	];
+	const googleSecret = safeString(form.get("google_drive_shared_secret"));
+	if (googleSecret) {
+		settings.push(["google_drive_shared_secret", googleSecret]);
+	}
+	const inboundSecret = safeString(form.get("inbound_webhook_secret"));
+	if (inboundSecret) {
+		settings.push(["inbound_webhook_secret", inboundSecret]);
+	}
+	await env.DB.batch(settings.map(([key, value]) => env.DB.prepare(`
+		INSERT INTO integration_settings (setting_key, setting_value, updated_at)
+		VALUES (?, ?, CURRENT_TIMESTAMP)
+		ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = CURRENT_TIMESTAMP
+	`).bind(key, value)));
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('admin', 'settings', 'integration_settings.updated', 'success', ?)")
+		.bind(JSON.stringify({ updated: settings.map(([key]) => key) }))
+		.run();
+	return redirect(`/portal${getAdminQuery(request)}`);
+}
+
+async function downloadCloudflareFile(request: Request, env: Env, fileId: number): Promise<Response> {
+	const unauthorized = requireAdmin(request, env);
+	if (unauthorized) {
+		return unauthorized;
+	}
+	await ensureInternTables(env);
+	const file = await env.DB.prepare("SELECT file_name, content_type, base64_data FROM intern_files WHERE id = ?").bind(fileId).first<{ file_name: string; content_type: string; base64_data: string }>();
+	if (!file) {
+		return htmlResponse("<h1>File not found</h1>", { status: 404 });
+	}
+	return new Response(base64ToBytes(file.base64_data), {
+		headers: {
+			"content-type": file.content_type,
+			"content-disposition": `attachment; filename="${file.file_name.replaceAll('"', '')}"`,
+		},
+	});
+}
+
+async function handleGoogleDriveWebhook(request: Request, env: Env): Promise<Response> {
+	await ensureInternTables(env);
+	const payload = await request.json<Record<string, unknown>>();
+	const configuredSecret = await getConfiguredValue(env, "inbound_webhook_secret", "INBOUND_WEBHOOK_SECRET");
+	const suppliedSecret = request.headers.get("x-1sv-webhook-secret") ?? String(payload.sharedSecret ?? "");
+	if (configuredSecret && suppliedSecret !== configuredSecret) {
+		await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('inbound', 'google_drive', 'drive_callback', 'unauthorized', ?)")
+			.bind(JSON.stringify({ payload }))
+			.run();
+		return jsonResponse({ ok: false, error: "Unauthorized" }, { status: 401 });
+	}
+	const candidateId = Number(payload.candidateId ?? 0);
+	const candidateName = String(payload.candidateName ?? "").trim();
+	const kind = String(payload.kind ?? payload.fileKind ?? "").trim();
+	const fileName = String(payload.fileName ?? "").trim();
+	const webViewLink = String(payload.webViewLink ?? payload.googleDriveUrl ?? "").trim();
+	if (!webViewLink || (!candidateId && !candidateName)) {
+		return jsonResponse({ ok: false, error: "candidateId or candidateName plus webViewLink is required" }, { status: 400 });
+	}
+	if (candidateId) {
+		await env.DB.prepare("UPDATE intern_files SET google_drive_url = ? WHERE candidate_id = ? AND (? = '' OR file_kind = ?) AND (? = '' OR file_name = ?)")
+			.bind(webViewLink, candidateId, kind, kind, fileName, fileName)
+			.run();
+		if (kind === "resume") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_resume_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(webViewLink, candidateId).run();
+		}
+		if (kind === "portfolio") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_portfolio_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(webViewLink, candidateId).run();
+		}
+	} else {
+		await env.DB.prepare("UPDATE intern_files SET google_drive_url = ? WHERE candidate_id IN (SELECT id FROM intern_candidates WHERE candidate_name = ?) AND (? = '' OR file_kind = ?)")
+			.bind(webViewLink, candidateName, kind, kind)
+			.run();
+		if (kind === "resume") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_resume_url = ?, updated_at = CURRENT_TIMESTAMP WHERE candidate_name = ?").bind(webViewLink, candidateName).run();
+		}
+		if (kind === "portfolio") {
+			await env.DB.prepare("UPDATE intern_candidates SET google_drive_portfolio_url = ?, updated_at = CURRENT_TIMESTAMP WHERE candidate_name = ?").bind(webViewLink, candidateName).run();
+		}
+	}
+	await env.DB.prepare("INSERT INTO webhook_events (direction, provider, event_type, status, payload) VALUES ('inbound', 'google_drive', 'drive_callback', 'success', ?)")
+		.bind(JSON.stringify(payload))
+		.run();
+	return jsonResponse({ ok: true, savedIn: getStorageLabel() });
+}
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
+	const url = new URL(request.url);
+
+	if (request.method === "GET" && url.pathname === "/") {
+		return htmlResponse(renderIntakeForm());
+	}
+
+	if (request.method === "POST" && url.pathname === "/intake") {
+		return createCandidate(request, env);
+	}
+
+	if (request.method === "GET" && (url.pathname === "/admin" || url.pathname === "/portal")) {
+		const unauthorized = requireAdmin(request, env);
+		if (unauthorized) {
+			return unauthorized;
+		}
+		return htmlResponse(renderAdmin(await listCandidates(env), await getStats(env), STATUS_OPTIONS, getAdminQuery(request), await getIntegrationSettings(env)));
+	}
+
+	if (request.method === "POST" && url.pathname === "/admin/update") {
+		return updateCandidate(request, env);
+	}
+
+	if (request.method === "POST" && url.pathname === "/admin/import") {
+		return importCandidates(request, env);
+	}
+
+	if (request.method === "POST" && url.pathname === "/admin/integrations") {
+		return saveIntegrationSettings(request, env);
+	}
+
+	if (request.method === "GET" && url.pathname.startsWith("/admin/files/")) {
+		const fileId = Number(url.pathname.split("/").pop());
+		return downloadCloudflareFile(request, env, fileId);
+	}
+
+	if (request.method === "POST" && url.pathname === "/webhooks/google-drive") {
+		return handleGoogleDriveWebhook(request, env);
+	}
+
+	if (request.method === "GET" && url.pathname === "/api/candidates") {
+		const unauthorized = requireAdmin(request, env);
+		if (unauthorized) {
+			return unauthorized;
+		}
+		return jsonResponse({ stats: await getStats(env), candidates: await listCandidates(env) });
+	}
+
+	if (request.method === "GET" && url.pathname === "/export.csv") {
+		const unauthorized = requireAdmin(request, env);
+		if (unauthorized) {
+			return unauthorized;
+		}
+		return new Response(toCsv(await listCandidates(env)), {
 			headers: {
-				"content-type": "text/html",
+				"content-type": "text/csv; charset=UTF-8",
+				"content-disposition": "attachment; filename=1sv-intern-tracker.csv",
 			},
 		});
-	},
+	}
+
+	if (request.method === "GET" && url.pathname === "/google-drive-setup") {
+		const unauthorized = requireAdmin(request, env);
+		if (unauthorized) {
+			return unauthorized;
+		}
+		return htmlResponse(renderDriveSetup());
+	}
+
+	return htmlResponse("<h1>Not found</h1><p>Visit <a href=\"/\">Intern intake</a> or <a href=\"/admin\">Admin tracker</a>.</p>", { status: 404 });
+}
+
+export default {
+	fetch: handleRequest,
 } satisfies ExportedHandler<Env>;

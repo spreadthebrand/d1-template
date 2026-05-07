@@ -1,59 +1,149 @@
-# Worker + D1 Database
+# 1 Soundvibe Studios Intern Intake System
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+This Cloudflare Worker + D1 app now runs a complete intake and tracking workflow for 1 Soundvibe Studios interns. It gives Rere a public candidate intake form, an admin portal/tracker, weekly reporting tools, CSV export for Google Sheets, and an optional Google Drive file-sync bridge for resumes and portfolios.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+## What It Does
 
-<!-- dash-content-start -->
+- Collects candidate name, email, phone, desired role, resume upload, portfolio/work samples, portfolio links, weekly availability, and notes.
+- Seeds the tracker with the current priority intern list for Rere and Brittany / BB Management to manage.
+- Tracks the required columns: candidate name, email, desired role, resume received, portfolio received, interview status, notes, and final placement.
+- Supports statuses: New Lead, Resume Requested, Resume Received, Interview Scheduled, Interview Completed, Accepted, Not Selected, and Future Consideration.
+- Stores candidates, uploaded files, webhook settings, webhook events, and activity logs in Cloudflare D1.
+- Exports the tracker as CSV for Google Sheets.
+- Connects Google Drive and notification webhooks from the admin portal; uploads are saved in Cloudflare first and then copied to Drive when configured.
+- Keeps the tracker admin-only with `ADMIN_TOKEN`; the public intake form links to the token-protected portal, not to candidate names.
+- Clearly shows where data is saved: candidate details in Cloudflare D1 and uploaded files in Google Drive when Drive sync is connected.
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+## Important Routes
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+| Route | Purpose |
+| --- | --- |
+| `/` | Public intern intake form for new candidates. |
+| `/portal` or `/admin` | Admin-token protected portal for Rere's dashboard and full tracker. |
+| `/api/candidates?token=ADMIN_TOKEN` | Admin-protected JSON feed of stats and candidates for integrations. |
+| `/export.csv?token=ADMIN_TOKEN` | CSV export for Google Sheets / Google Drive workflows. |
+| `/google-drive-setup?token=ADMIN_TOKEN` | Admin-protected Google Apps Script setup instructions for Drive uploads. |
+
+
+## Where Everything Is Saved
+
+- **Candidate tracker records** are saved in the Cloudflare D1 database configured in `wrangler.json` as binding `DB` and database name `d1-template-database`. The main table is `intern_candidates`; activity history is saved in `intern_activity_log`.
+- **Uploaded resume and portfolio files** are saved in Cloudflare D1 table `intern_files` first. After the Google Apps Script webhook is connected in the admin portal, files are also copied to Google Drive folder `1 Soundvibe Studios Intern Intake`, and each candidate row stores the returned Drive URL.
+- **Admin portal** is available at `/portal` and `/admin`. It requires `ADMIN_TOKEN` and shows all candidates, current-list imports, statuses, notes, trial assignments, final placements, Cloudflare file downloads, CSV export, JSON API, Drive links, and webhook connection forms.
+- **Integration settings and webhook logs** are saved in Cloudflare D1 tables `integration_settings` and `webhook_events`.
+
+## Admin Access
+
+The tracker is intentionally private. Set an `ADMIN_TOKEN` before using the admin dashboard:
+
+```bash
+npx wrangler secret put ADMIN_TOKEN
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Then open `/portal` or `/admin`, enter the token, and the app will keep that token on admin-only links and save buttons. If `ADMIN_TOKEN` is not configured, `/admin` shows a setup warning instead of exposing the candidate list.
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+The admin dashboard includes an **Import Current Candidate List** box so you can paste the current intern list for Rere without displaying candidate names on the public intake form. Supported formats are:
+
+```text
+Devon L. Barnett — Graphic Design Intern
+Tycian White — Photography Intern
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+or CSV:
 
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+```text
+Name, Email, Role, Resume Received, Portfolio Received, Status, Notes
+Devon L. Barnett,,Graphic Design Intern,No,No,Resume Requested,Only graphic design candidate
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+## Local Setup
 
-## Setup Steps
+1. Install dependencies:
 
-1. Install the project dependencies with a package manager of your choice:
    ```bash
    npm install
    ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
+
+2. For local admin testing, create a temporary `.dev.vars` file with an admin token:
+
    ```bash
-   npx wrangler d1 create d1-template-database
+   printf "ADMIN_TOKEN=test\n" > .dev.vars
    ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
+
+3. Apply local D1 migrations:
+
    ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
+   npx wrangler d1 migrations apply DB --local
    ```
-4. Deploy the project!
+
+4. Start local development:
+
    ```bash
-   npx wrangler deploy
+   npm run dev
    ```
+
+5. Open the local Worker URL shown by Wrangler and visit `/portal?token=test` for the local admin portal.
+
+## Next Setup Checklist
+
+After deployment, finish the connection in this order:
+
+1. Set `ADMIN_TOKEN` with `npx wrangler secret put ADMIN_TOKEN`.
+2. Apply remote migrations with `npx wrangler d1 migrations apply DB --remote`.
+3. Open `/portal`, enter the admin token, and confirm the seeded candidate tracker loads.
+4. In **Webhook & Google Drive Connections**, paste the Google Apps Script webhook URL and shared secret.
+5. Submit one test intake with a resume and confirm the portal shows both the Cloudflare file download and the Google Drive link after Drive sync runs.
+
+## Webhook / Google Connection From Admin Portal
+
+1. Open `/portal` with the admin token.
+2. Use **Webhook & Google Drive Connections** to paste:
+   - Google Apps Script Webhook URL.
+   - Google shared secret.
+   - Optional new-intake notification webhook URL, such as Zapier, Make, Slack, or CRM.
+   - Inbound webhook secret for callbacks.
+3. Open `/google-drive-setup?token=ADMIN_TOKEN`, copy the Apps Script, deploy it in Google, and paste the deployed Apps Script URL back into the admin portal.
+4. New intake submissions now save records and uploaded files in Cloudflare D1 first, then call the configured Google webhook and log callback/status events in Cloudflare.
+
+The inbound Google callback endpoint is `/webhooks/google-drive`.
+
+## Google Drive Connection
+
+Cloudflare Workers cannot access your Google Drive unless you provide a Google-side endpoint. This app uses a Google Apps Script web app as that bridge.
+
+1. Visit `/google-drive-setup?token=ADMIN_TOKEN` in the deployed app.
+2. Copy the provided Google Apps Script into a new Apps Script project while signed into the Google account that owns the Drive folder.
+3. Change the script's shared secret to a long private value.
+4. Deploy the script as a web app and copy its web app URL.
+5. Store the values as Worker secrets:
+
+   ```bash
+   npx wrangler secret put GOOGLE_DRIVE_WEBHOOK_URL
+   npx wrangler secret put GOOGLE_DRIVE_SHARED_SECRET
+   ```
+
+Every new resume and portfolio upload is saved in Cloudflare D1 table `intern_files` first. When Google Drive is configured, uploads are also copied into candidate-specific folders under `1 Soundvibe Studios Intern Intake`, returned Drive links are saved in D1, and callback events are recorded in `webhook_events`.
+
+## Deployment
+
+1. Apply migrations to the remote D1 database:
+
+   ```bash
+   npx wrangler d1 migrations apply DB --remote
+   ```
+
+2. Deploy the Worker:
+
+   ```bash
+   npm run deploy
+   ```
+
+## Intern Intake Operating Flow
+
+- **Monday:** Rere updates the intern tracker and sends follow-up messages.
+- **Tuesday:** Rere schedules interviews and confirms resumes.
+- **Wednesday:** Brittany helps with reminders and communication.
+- **Thursday:** Group interviews or individual follow-ups happen.
+- **Friday:** Rere sends Lafayette the weekly intern update from the admin dashboard.
+
+Rere should organize, contact, screen, schedule, and report. Lafayette Taylor should retain final acceptance authority.
