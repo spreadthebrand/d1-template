@@ -84,6 +84,16 @@ Devon L. Barnett,,Graphic Design Intern,No,No,Resume Requested,Only graphic desi
 
 5. Open the local Worker URL shown by Wrangler and visit `/portal?token=test` for the local admin portal.
 
+## Next Setup Checklist
+
+After deployment, finish the connection in this order:
+
+1. Set `ADMIN_TOKEN` with `npx wrangler secret put ADMIN_TOKEN`.
+2. Apply remote migrations with `npx wrangler d1 migrations apply DB --remote`.
+3. Open `/portal`, enter the admin token, and confirm the seeded candidate tracker loads.
+4. In **Webhook & Google Drive Connections**, paste the Google Apps Script webhook URL and shared secret.
+5. Submit one test intake with a resume and confirm the portal shows both the Cloudflare file download and the Google Drive link after Drive sync runs.
+
 ## Webhook / Google Connection From Admin Portal
 
 1. Open `/portal` with the admin token.
@@ -112,7 +122,7 @@ Cloudflare Workers cannot access your Google Drive unless you provide a Google-s
    npx wrangler secret put GOOGLE_DRIVE_SHARED_SECRET
    ```
 
-When configured, new resume and portfolio uploads are copied into candidate-specific folders under `1 Soundvibe Studios Intern Intake` in Google Drive, and returned Drive links are saved in D1.
+Every new resume and portfolio upload is saved in Cloudflare D1 table `intern_files` first. When Google Drive is configured, uploads are also copied into candidate-specific folders under `1 Soundvibe Studios Intern Intake`, returned Drive links are saved in D1, and callback events are recorded in `webhook_events`.
 
 ## Deployment
 

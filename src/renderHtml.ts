@@ -129,8 +129,15 @@ export function renderIntakeForm(): string {
 	<section class="card storage">
 		<h2>Where submissions are saved</h2>
 		<p><strong>Candidate details:</strong> saved in Cloudflare D1 table <code>intern_candidates</code> through the <code>DB</code> binding.</p>
-		<p><strong>Resumes / portfolio files:</strong> sent to the Google Drive folder <code>1 Soundvibe Studios Intern Intake</code> only after <code>GOOGLE_DRIVE_WEBHOOK_URL</code> is configured. The tracker stores the Drive links.</p>
+		<p><strong>Resumes / portfolio files:</strong> saved first in Cloudflare D1 table <code>intern_files</code>. After Google Drive is connected, they are also copied to Drive folder <code>1 Soundvibe Studios Intern Intake</code>, and the tracker stores the Drive links.</p>
 		<p><strong>Admin portal:</strong> open <a href="/portal">/portal</a> or <a href="/admin">/admin</a> and enter the admin token.</p>
+		<h3>Next setup steps</h3>
+		<ol>
+			<li>Set <code>ADMIN_TOKEN</code> so only admins can access the portal.</li>
+			<li>Open <code>/portal</code> and use <strong>Webhook &amp; Google Drive Connections</strong> to save the Google Apps Script webhook URL and shared secret.</li>
+			<li>Open <code>/google-drive-setup</code> from the portal, copy the script into Google Apps Script, deploy it, and paste the deployed URL back into the portal.</li>
+			<li>Submit a test candidate with a resume to confirm the Cloudflare file link and Drive link appear in the tracker.</li>
+		</ol>
 	</section>
 	<section class="card">
 		<h2>Candidate Intake Form</h2>
@@ -167,7 +174,7 @@ export function renderIntakeForm(): string {
 export function renderSuccess(candidateName: string, driveSync: DriveSyncResultView): string {
 	const driveMessage = driveSync.resume || driveSync.portfolio
 		? `<p class="notice"><strong>Saved:</strong> Candidate details are in Cloudflare D1, and uploaded file(s) were copied to Google Drive.</p>`
-		: `<p class="notice"><strong>Saved:</strong> Candidate details are in Cloudflare D1 table <code>intern_candidates</code>. File uploads require <code>GOOGLE_DRIVE_WEBHOOK_URL</code>; until Drive sync is connected, the tracker stores candidate details and external portfolio links only.</p>`;
+		: `<p class="notice"><strong>Saved:</strong> Candidate details are in Cloudflare D1 table <code>intern_candidates</code>, and uploaded files are saved in Cloudflare D1 table <code>intern_files</code>. Google Drive copying starts after the admin connects the Google Apps Script webhook in the portal.</p>`;
 	return page("Intern Intake Submitted", `
 <header class="hero"><h1>Submission Received</h1><p>Thank you, ${escapeHtml(candidateName)}. Rere will review your intake details and follow up about interviews/orientation.</p></header>
 <main><section class="card">${driveMessage}<div class="actions"><a class="button" href="/">Submit Another Candidate</a><a class="button light" href="/portal">Admin Portal</a></div></section></main>`);
