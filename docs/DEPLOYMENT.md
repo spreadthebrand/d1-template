@@ -1,13 +1,17 @@
 # Deployment Guide
 
-## Cloudflare Worker demo deployment
+For the shortest production path, use `docs/LIVE_LAUNCH_CHECKLIST.md`. This app is already a deployable Cloudflare Worker + D1 application; a Next.js/Vercel migration is optional for a later production rewrite.
+
+## Cloudflare Worker production deployment
 
 1. Install dependencies with `npm install`.
-2. Create or reuse a D1 database and update `wrangler.json` if needed.
-3. Apply migrations locally with `npm run seedLocalD1`.
-4. Validate with `npm run check`.
+2. Log in with `npx wrangler login`.
+3. Create a D1 database with `npm run db:create`.
+4. Copy the returned `database_id` into `wrangler.json`.
 5. Add production secrets with `npx wrangler secret put OPENAI_API_KEY` and any approved provider credentials.
-6. Deploy with `npm run deploy`.
+6. Apply remote migrations with `npm run db:migrate:remote`.
+7. Validate with `npm run check`.
+8. Deploy with `npm run deploy:production`.
 
 ## Vercel + Next.js production target
 

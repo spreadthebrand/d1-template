@@ -110,4 +110,4 @@ Requested production stack mapping:
 - AI: OpenAI API for draft generation only.
 - Integrations: Meta Graph API, Instagram Basic Display API, CSV import, Twilio, SendGrid, GoHighLevel webhook, and Zapier webhook placeholders.
 
-See `docs/DEPLOYMENT.md` for Cloudflare and Vercel deployment guidance.
+See `docs/DEPLOYMENT.md` for Cloudflare and Vercel deployment guidance, and `docs/LIVE_LAUNCH_CHECKLIST.md` for the exact steps to publish this app to a live Worker URL.
