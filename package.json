@@ -1,18 +1,16 @@
 {
-	"name": "d1-template",
-	"description": "Cloudflare's native serverless SQL database.",
+	"name": "one-sv-fast-trade-ai",
+	"description": "Mobile-first manual trading assistant PWA with risk controls.",
 	"cloudflare": {
-		"label": "Worker + D1 Database",
+		"label": "1SV Fast Trade AI",
 		"products": [
-			"Workers",
-			"D1"
+			"Workers"
 		],
 		"categories": [
-			"storage"
+			"starter",
+			"productivity"
 		],
-		"docs_url": "https://developers.cloudflare.com/d1/",
-		"preview_icon_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/6c63cca8-354a-4951-45a0-d58769ac6f00/public",
-		"preview_image_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/aa6158f1-7711-4485-f134-a8c802c0a800/preview",
+		"docs_url": "https://developers.cloudflare.com/workers/",
 		"publish": true
 	},
 	"devDependencies": {
@@ -24,8 +22,6 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "pnpm seedLocalD1 && wrangler dev",
-		"predeploy": "wrangler d1 migrations apply DB --remote",
-		"seedLocalD1": "wrangler d1 migrations apply DB --local"
+		"dev": "wrangler dev"
 	}
 }

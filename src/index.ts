@@ -1,14 +1,26 @@
-import { renderHtml } from "./renderHtml";
+import { renderHtml, renderManifest, renderServiceWorker } from "./renderHtml";
 
 export default {
-	async fetch(request, env) {
-		const stmt = env.DB.prepare("SELECT * FROM comments LIMIT 3");
-		const { results } = await stmt.all();
+	async fetch(request) {
+		const url = new URL(request.url);
 
-		return new Response(renderHtml(JSON.stringify(results, null, 2)), {
-			headers: {
-				"content-type": "text/html",
-			},
+		if (url.pathname === "/manifest.webmanifest") {
+			return new Response(renderManifest(), {
+				headers: { "content-type": "application/manifest+json" },
+			});
+		}
+
+		if (url.pathname === "/sw.js") {
+			return new Response(renderServiceWorker(), {
+				headers: {
+					"content-type": "application/javascript",
+					"cache-control": "no-cache",
+				},
+			});
+		}
+
+		return new Response(renderHtml(), {
+			headers: { "content-type": "text/html; charset=utf-8" },
 		});
 	},
 } satisfies ExportedHandler<Env>;
