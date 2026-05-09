@@ -50,6 +50,80 @@ Admins and super admins can view applications, approve or reject applicants, vie
 
 The schema includes internal-only backend distributor options: Vydia, Too Lost, Symphonic, FUGA, Virgin Music Group, and Other. Release records include delivery status, delivery notes, delivery date, DSP issue flag, Content ID status, and royalty import source. These fields are available to admin APIs and excluded from public presentation by default.
 
+
+### Release export package system
+
+Admins and super admins can generate internal-only delivery packages for Vydia or manual backend delivery from approved releases. Artist accounts never receive backend distributor, backend account, export log, or internal delivery-note fields; artist release responses are limited to artist-safe status, artist-facing notes, live links, and royalty data.
+
+Admin export controls include:
+
+- **Generate Delivery Package** for the full release ZIP.
+- **Export Metadata CSV** for partner metadata entry.
+- **Download Audio Files** and **Download Artwork** bundles.
+- **Download Full Release ZIP** with the required `1SV_RELEASE_EXPORT` folder structure.
+- **Mark as Delivered** and **Add Backend Delivery Notes** for manual delivery status tracking.
+- **Copy Vydia Delivery Notes** for a formatted Vydia handoff note.
+
+The full ZIP is generated server-side and contains:
+
+```text
+/1SV_RELEASE_EXPORT/
+  /metadata/
+    metadata.csv
+    split_sheet.csv
+    contributor_credits.csv
+  /audio/
+    track_01_title.wav
+  /artwork/
+    cover_art_3000x3000.jpg
+  /lyrics/
+    track_01_lyrics.txt
+  /admin/
+    delivery_notes.txt
+    backend_distributor.txt
+    content_id_opt_in.txt
+    sync_opt_in.txt
+  release_summary.pdf
+```
+
+Before export, the server validates WAV presence, cover art presence/type, release date, artist name, track title, writer credits, P-line, C-line, explicit flag choice, Content ID choice, and sync opt-in choice. Cover dimensions are surfaced as warnings if they are missing or not 3000x3000. Admins are blocked on missing required items; super admins can intentionally override by calling the export endpoint with `?override=1`.
+
+Export activity is written to `export_logs` and `audit_logs`, including release ID, exported admin, export type, backend distributor, secure storage path when configured, timestamp, and validation notes.
+
+### Vydia/manual delivery workflow
+
+1. Admin opens the Admin Dashboard and selects **Generate Delivery Package** for a release.
+2. Admin reviews the validation checklist and Vydia checklist: metadata, WAV audio, artwork, rights, uncleared samples, explicit lyrics flag, Content ID eligibility, territories, artist profile links, and release-date window.
+3. Admin saves backend delivery notes and selects an internal backend distributor such as `Vydia` or `Manual / Other`.
+4. Admin downloads the metadata CSV or full ZIP and uploads/processes it in the selected backend distributor account.
+5. Admin uses **Copy Vydia Delivery Notes** to paste a clean internal delivery note into the backend partner workflow.
+6. Admin updates delivery status through: `Ready for Export`, `Export Generated`, `Sent to Backend Distributor`, `Delivered`, `Live`, `Issue Flagged`, `Takedown Requested`, or `Archived`.
+7. Admin adds live DSP links after the release is live; artists can see only the live links and artist-facing notes.
+
+### Supabase Storage configuration for exports
+
+The Worker can store generated export packages in a private Supabase Storage bucket while still returning the generated file to the admin browser. Configure two private buckets:
+
+- `release-assets` for source WAV, artwork, lyric, and press-kit assets.
+- `release-exports` for generated delivery packages.
+
+Recommended Supabase policy approach:
+
+- Keep both buckets private.
+- Do not expose service-role keys to the browser.
+- Allow only the Worker/server runtime to read source assets and write export packages.
+- Store object paths in the `files.storage_path` field for source assets.
+- Store generated export object paths in `export_logs.export_file_url`.
+
+Required storage variables:
+
+```bash
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler secret put SUPABASE_ASSET_BUCKET
+wrangler secret put SUPABASE_EXPORT_BUCKET
+```
+
 ### Payments and email
 
 - Stripe Checkout endpoint for application fees, distribution setup fees, monthly artist plans, add-ons, and invoice-like payments.
@@ -89,6 +163,7 @@ The D1 migration creates:
 - `backend_distributors`
 - `platform_settings`
 - `audit_logs`
+- `export_logs`
 
 ## Environment variables
 
@@ -104,6 +179,10 @@ wrangler secret put STRIPE_SUCCESS_URL
 wrangler secret put STRIPE_CANCEL_URL
 wrangler secret put RESEND_API_KEY
 wrangler secret put RESEND_FROM_EMAIL
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler secret put SUPABASE_ASSET_BUCKET
+wrangler secret put SUPABASE_EXPORT_BUCKET
 ```
 
 Required binding:
