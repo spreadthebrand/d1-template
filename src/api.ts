@@ -1,4 +1,5 @@
 import { bookingCtas, leadStatuses, roles, tones } from "./data";
+import { getIntegrationStatuses, getLaunchChecklist } from "./integrations";
 import {
   createBookingLink,
   createCampaign,
@@ -187,18 +188,14 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
 
   if (url.pathname === "/api/integrations") {
     return json({
-      integrations: [
-        { name: "Meta Graph API", status: "configure", purpose: "Approved Instagram messaging and business asset workflows" },
-        { name: "Instagram Basic Display API", status: "configure", purpose: "User-authorized profile/media access" },
-        { name: "CSV import", status: "enabled", purpose: "Manual consent-safe upload" },
-        { name: "Twilio", status: "configure", purpose: "SMS with consent" },
-        { name: "SendGrid", status: "configure", purpose: "Email with unsubscribe" },
-        { name: "GoHighLevel webhook", status: "configure", purpose: "Booking and CRM sync" },
-        { name: "Zapier webhook", status: "configure", purpose: "No-code workflow handoff" },
-      ],
+      integrations: getIntegrationStatuses(env),
       tones,
       defaultCtas: bookingCtas,
     });
+  }
+
+  if (url.pathname === "/api/setup-checklist") {
+    return json(getLaunchChecklist(env));
   }
 
   return json({ error: "Not found" }, { status: 404 });

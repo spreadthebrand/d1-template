@@ -46,7 +46,7 @@ Keep these values aligned:
 
 ## 3. Add production secrets
 
-Only add secrets for providers you are actively using. The app still works without OpenAI by falling back to a safe local DM template.
+Only add secrets for providers you are actively using. The app still works without OpenAI by falling back to a safe local DM template. See `docs/API_INTEGRATIONS.md` for provider-by-provider setup.
 
 ```bash
 npx wrangler secret put OPENAI_API_KEY
@@ -88,6 +88,7 @@ Replace `YOUR_WORKER_URL` with the URL Wrangler prints.
 ```bash
 curl https://YOUR_WORKER_URL/api/health
 curl https://YOUR_WORKER_URL/api/dashboard
+curl https://YOUR_WORKER_URL/api/setup-checklist
 curl -X POST https://YOUR_WORKER_URL/api/leads \
   -H "content-type: application/json" \
   -d '{"name":"Launch Test Artist","username":"launchtestartist","source":"Launch smoke test"}'

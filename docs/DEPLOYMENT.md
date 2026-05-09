@@ -1,6 +1,6 @@
 # Deployment Guide
 
-For the shortest production path, use `docs/LIVE_LAUNCH_CHECKLIST.md`. This app is already a deployable Cloudflare Worker + D1 application; a Next.js/Vercel migration is optional for a later production rewrite.
+For the shortest production path, use `docs/LIVE_LAUNCH_CHECKLIST.md`. For provider keys and webhook setup, use `docs/API_INTEGRATIONS.md`. This app is already a deployable Cloudflare Worker + D1 application; a Next.js/Vercel migration is optional for a later production rewrite.
 
 ## Cloudflare Worker production deployment
 
