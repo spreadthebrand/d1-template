@@ -1,59 +1,113 @@
-# Worker + D1 Database
+# 1SV Growth Engine
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+1SV Growth Engine is an ethical Instagram lead discovery, CRM, and outreach automation platform for creators, studios, artists, and small businesses. It is positioned as a simpler, safer alternative to tools like ManyChat, Inflact, and PhantomBuster for teams that want lead organization, AI-assisted drafting, approval queues, and booking workflows without spammy automation.
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+This starter is implemented as a Cloudflare Worker + D1 app so it can run inside the existing repository. The dashboard, forms, and JSON APIs now read/write D1 data for leads, lead searches, campaigns, booking links, approvals, audit logs, and AI-safe draft generation. It also includes a PostgreSQL Prisma schema and Vercel deployment notes for a production Next.js migration.
 
-<!-- dash-content-start -->
+## Compliance-first design
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+The app intentionally does **not** implement illegal scraping, fake Instagram login, password collection, bot abuse, or unauthorized spam tooling.
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+Key safeguards:
+
+- Official Meta / Instagram API placeholders where applicable.
+- Public discovery architecture that only accepts lawful public data or manual CSV imports.
+- Draft-only AI message generation.
+- Human approval queue before every outbound message.
+- Duplicate lead detection model.
+- Do Not Contact and opt-out enforcement.
+- Daily limits, cooldowns, audit logs, consent tracking, and spam warnings.
+
+## Built pages
+
+- `/login`
+- `/dashboard`
+- `/leads`
+- `/lead/ld_001`
+- `/campaigns`
+- `/campaign-builder`
+- `/approval-queue`
+- `/inbox`
+- `/booking-links`
+- `/team`
+- `/settings`
+- `/compliance`
+- `/integrations`
+
+## API surfaces
+
+- `GET /api/health`
+- `GET /api/dashboard`
+- `GET /api/leads`
+- `GET /api/leads/:id`
+- `POST /api/import/csv`
+- `GET /api/campaigns`
+- `GET /api/approval-queue`
+- `POST /api/ai/generate-dm`
+- `GET /api/inbox`
+- `GET /api/booking-links`
+- `GET /api/automation-rules`
+- `GET /api/team`
+- `GET /api/compliance`
+- `GET /api/integrations`
+
+## Demo campaigns
+
+Starter data includes campaigns for:
+
+- Houston recording studio tour
+- R&B artist session invite
+- Producer collaboration
+- Vibe Check Thursday invite
+- Podcast room booking
+- Membership offer
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env
+npm run seedLocalD1
+npm run dev
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Open the local Worker URL printed by Wrangler, then visit `/dashboard`.
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+## Live workflow checks
+
+After `npm run dev`, try these active workflows:
+
+```bash
+curl -X POST http://localhost:8787/api/leads \
+  -H "content-type: application/json" \
+  -d '{"name":"Test Artist","username":"testartist","source":"API"}'
+
+curl http://localhost:8787/api/leads
+
+curl -X PATCH http://localhost:8787/api/approval-queue/msg_001 \
+  -H "content-type: application/json" \
+  -d '{"action":"approve"}'
 ```
 
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
+The HTML forms on `/leads`, `/campaign-builder`, `/approval-queue`, and `/booking-links` also submit to Worker action routes and persist to D1.
 
-<!-- dash-content-end -->
+## Validation
 
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
+```bash
+npm run check
 ```
 
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
+The check command runs TypeScript and a Wrangler dry-run deploy.
 
-## Setup Steps
+## Production architecture
 
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
+Requested production stack mapping:
+
+- Frontend: Next.js pages/components styled like a Shadcn/Tailwind SaaS dashboard.
+- Backend: Next.js API routes or server actions matching the Worker API surfaces.
+- ORM/database: Prisma + PostgreSQL using `prisma/schema.prisma`.
+- Auth: Clerk or NextAuth.
+- AI: OpenAI API for draft generation only.
+- Integrations: Meta Graph API, Instagram Basic Display API, CSV import, Twilio, SendGrid, GoHighLevel webhook, and Zapier webhook placeholders.
+
+See `docs/DEPLOYMENT.md` for Cloudflare and Vercel deployment guidance, `docs/LIVE_LAUNCH_CHECKLIST.md` for the exact steps to publish this app to a live Worker URL, and `docs/API_INTEGRATIONS.md` for adding OpenAI, Meta, Twilio, SendGrid, GoHighLevel, Zapier, and booking links.

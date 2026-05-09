@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LeadStatus {
+  New
+  Contacted
+  Replied
+  Interested
+  BookedTour
+  BookedSession
+  NotInterested
+  DoNotContact
+}
+
+enum TeamRole {
+  Owner
+  Manager
+  VA
+  SalesRep
+}
+
+model Workspace {
+  id                  String           @id @default(cuid())
+  name                String
+  businessDescription String?
+  defaultTone         String           @default("Friendly")
+  createdAt           DateTime         @default(now())
+  teamMembers         TeamMember[]
+  leads               Lead[]
+  campaigns           Campaign[]
+  messageDrafts       MessageDraft[]
+  bookingLinks        BookingLink[]
+  automationRules     AutomationRule[]
+  integrations        Integration[]
+  auditLogs           AuditLog[]
+  leadSearches        LeadSearch[]
+}
+
+model LeadSearch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  searchType  String
+  query       String
+  connector   String
+  status      String    @default("Ready for connector")
+  notes       String?
+  createdAt   DateTime  @default(now())
+}
+
+model TeamMember {
+  id          String      @id @default(cuid())
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+  name        String
+  email       String
+  role        TeamRole
+  createdAt   DateTime    @default(now())
+  assigned    Lead[]
+  approvals   MessageDraft[] @relation("DraftApprover")
+  auditLogs   AuditLog[]
+}
+
+model Lead {
+  id               String         @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace      @relation(fields: [workspaceId], references: [id])
+  name             String
+  username         String?
+  profileUrl       String?
+  email            String?
+  phone            String?
+  platform         String         @default("Instagram")
+  source           String?
+  tags             String[]       @default([])
+  notes            String?
+  status           LeadStatus     @default(New)
+  city             String?
+  profileBio       String?
+  lastContactedAt  DateTime?
+  assignedMemberId String?
+  assignedMember   TeamMember?    @relation(fields: [assignedMemberId], references: [id])
+  consentStatus    String         @default("unknown")
+  doNotContact     Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  messageDrafts    MessageDraft[]
+  conversations    Conversation[]
+
+  @@unique([workspaceId, platform, username])
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id])
+  name           String
+  campaignType   String
+  audience       String?
+  messageStep1   String
+  followUp1      String?
+  followUp2      String?
+  waitTimeHours  Int            @default(72)
+  stopCondition  String
+  dailyLimit     Int            @default(25)
+  isRunning      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  messageDrafts  MessageDraft[]
+}
+
+model MessageDraft {
+  id             String      @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace   @relation(fields: [workspaceId], references: [id])
+  leadId         String
+  lead           Lead        @relation(fields: [leadId], references: [id])
+  campaignId     String?
+  campaign       Campaign?   @relation(fields: [campaignId], references: [id])
+  channel        String
+  body           String
+  riskLevel      String      @default("Low")
+  approvalStatus String      @default("Pending")
+  approvedById   String?
+  approvedBy     TeamMember? @relation("DraftApprover", fields: [approvedById], references: [id])
+  approvedAt     DateTime?
+  createdAt      DateTime    @default(now())
+}
+
+model Conversation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  channel     String
+  direction   String
+  body        String
+  sentiment   String?
+  createdAt   DateTime  @default(now())
+}
+
+model BookingLink {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  label       String
+  provider    String
+  url         String
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+model AutomationRule {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id])
+  triggerName      String
+  actionName       String
+  requiresApproval Boolean   @default(true)
+  enabled          Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+}
+
+model Integration {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  provider    String
+  status      String    @default("placeholder")
+  configJson  Json?
+  createdAt   DateTime  @default(now())
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id])
+  actorId      String?
+  actor        TeamMember? @relation(fields: [actorId], references: [id])
+  action       String
+  targetType   String?
+  targetId     String?
+  metadataJson Json?
+  createdAt    DateTime    @default(now())
+}
