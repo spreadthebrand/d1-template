@@ -1,0 +1,3 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth";
+export async function GET(){ const auth=await requireRole(); if(auth.error) return auth.error; const userId=auth.session!.user!.id!; const [profile,networks,videos]=await Promise.all([prisma.creatorProfile.findUnique({where:{userId}}),prisma.network.findMany({where:{ownerId:userId}}),prisma.video.findMany({where:{network:{ownerId:userId}}})]); return NextResponse.json({profile,networks,videos}); }

@@ -1,0 +1,1 @@
+export default function Rights(){ return <section className="section prose-ccb"><h1>Content Rights</h1><p>Creators must own or control submitted content. CCB Network reviews content before distribution. Submission does not guarantee approval. Third-party TV platforms may require separate approval, developer accounts, fees, and compliance.</p></section> }

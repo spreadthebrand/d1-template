@@ -1,0 +1,2 @@
+import { PricingCards } from "@/components/PricingCards"; import { defaultPlans } from "@/lib/content";
+export default function Pricing(){ return <section className="section"><h1 className="text-5xl font-black">Flexible pricing for a web-first launch</h1><p className="mt-5 max-w-3xl text-slate-300">Payments are disabled in MVP unless Stripe keys are configured later.</p><div className="mt-10"><PricingCards plans={defaultPlans}/></div></section> }

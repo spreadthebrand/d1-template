@@ -1,0 +1,4 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth"; import { videoSchema } from "@/lib/validation"; import { slugify } from "@/lib/utils";
+export async function GET(){ const auth=await requireRole("admin"); if(auth.error) return auth.error; return NextResponse.json(await prisma.video.findMany({ take:100, orderBy:{createdAt:"desc"} })); }
+export async function POST(req:Request){ const auth=await requireRole("admin"); if(auth.error) return auth.error; const parsed=videoSchema.safeParse(await req.json()); if(!parsed.success) return NextResponse.json({error:parsed.error.flatten()},{status:400}); const video=await prisma.video.create({data:{...parsed.data, slug:slugify(parsed.data.title), isApproved:parsed.data.isApproved ?? true, isFeatured:parsed.data.isFeatured ?? false}}); return NextResponse.json(video,{status:201}); }

@@ -1,0 +1,3 @@
+export const dynamic = "force-dynamic";
+import { prisma } from "@/lib/prisma"; import { notFound } from "next/navigation"; import { sanitizeArticleContent } from "@/lib/sanitize";
+export default async function Resource({ params }:{ params:{slug:string} }){ const article=await prisma.resourceArticle.findUnique({ where:{ slug:params.slug } }); if(!article || !article.isPublished) notFound(); return <section className="section prose-ccb"><p className="font-bold uppercase tracking-widest text-gold">{article.category}</p><h1>{article.title}</h1><p>{article.excerpt}</p><div dangerouslySetInnerHTML={{ __html: sanitizeArticleContent(article.content) }} /></section> }

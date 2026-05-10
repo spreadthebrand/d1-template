@@ -1,0 +1,1 @@
+export default function Privacy(){ return <section className="section prose-ccb"><h1>Privacy Policy</h1><p>CCB Network collects application, contact, account, network, video, and analytics information needed to operate the platform. View logs may use hashed IP and user-agent values for basic analytics.</p></section> }

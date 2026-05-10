@@ -1,0 +1,3 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth";
+export async function PATCH(req:Request,{params}:{params:{id:string}}){ const auth=await requireRole("admin"); if(auth.error) return auth.error; const body=await req.json(); return NextResponse.json(await prisma.user.update({where:{id:params.id},data:{name:body.name,role:body.role},select:{id:true,name:true,email:true,role:true,updatedAt:true}})); }

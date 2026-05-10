@@ -1,0 +1,1 @@
+export default function Terms(){ return <section className="section prose-ccb"><h1>Terms of Use</h1><p>CCB Network provides web-first tools for network planning, applications, content review, and approved public publishing. Third-party distribution is not guaranteed.</p></section> }

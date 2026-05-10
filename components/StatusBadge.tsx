@@ -1,0 +1,1 @@
+export function StatusBadge({ status }: { status: string }) { return <span className="rounded-full border border-electric/40 bg-electric/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-200">{status.replaceAll("_", " ")}</span>; }

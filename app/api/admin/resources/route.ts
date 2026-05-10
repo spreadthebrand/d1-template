@@ -1,0 +1,4 @@
+export const dynamic = "force-dynamic";
+import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth"; import { resourceSchema } from "@/lib/validation"; import { slugify } from "@/lib/utils";
+export async function GET(){ const auth=await requireRole("admin"); if(auth.error) return auth.error; return NextResponse.json(await prisma.resourceArticle.findMany({orderBy:{createdAt:"desc"}})); }
+export async function POST(req:Request){ const auth=await requireRole("admin"); if(auth.error) return auth.error; const parsed=resourceSchema.safeParse(await req.json()); if(!parsed.success) return NextResponse.json({error:parsed.error.flatten()},{status:400}); const data=parsed.data; return NextResponse.json(await prisma.resourceArticle.create({data:{...data,slug:slugify(data.title)}}),{status:201}); }

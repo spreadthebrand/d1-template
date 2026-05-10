@@ -1,0 +1,200 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum Role { admin creator }
+enum NetworkStatus { draft building live distribution_ready archived }
+enum ApplicationStatus { pending approved rejected }
+enum LeadStatus { new contacted qualified closed }
+
+model User {
+  id String @id @default(cuid())
+  name String?
+  email String @unique
+  passwordHash String?
+  authProviderId String?
+  role Role @default(creator)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  creatorProfile CreatorProfile?
+  networks Network[] @relation("NetworkOwner")
+}
+
+model CreatorProfile {
+  id String @id @default(cuid())
+  userId String @unique
+  fullName String
+  phone String?
+  organization String?
+  bio String?
+  website String?
+  socialLinks Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Network {
+  id String @id @default(cuid())
+  ownerId String
+  name String
+  slug String @unique
+  logoUrl String?
+  bannerUrl String?
+  description String
+  category String
+  targetAudience String?
+  status NetworkStatus @default(draft)
+  distributionGoals String?
+  monetizationGoals String?
+  websiteUrl String?
+  socialLinks Json?
+  isApproved Boolean @default(false)
+  isFeatured Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation("NetworkOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  shows Show[]
+  videos Video[]
+  viewLogs ViewLog[]
+  distributionChecklist DistributionChecklist?
+}
+
+model Show {
+  id String @id @default(cuid())
+  networkId String
+  title String
+  slug String @unique
+  description String
+  coverImageUrl String?
+  category String
+  isApproved Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  network Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
+  videos Video[]
+}
+
+model Video {
+  id String @id @default(cuid())
+  networkId String
+  showId String?
+  title String
+  slug String @unique
+  description String
+  videoUrl String
+  thumbnailUrl String?
+  duration Int?
+  category String
+  viewCount Int @default(0)
+  isApproved Boolean @default(false)
+  isFeatured Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  network Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
+  show Show? @relation(fields: [showId], references: [id], onDelete: SetNull)
+  viewLogs ViewLog[]
+}
+
+model Application {
+  id String @id @default(cuid())
+  fullName String
+  email String
+  phone String?
+  organization String?
+  networkName String
+  networkCategory String
+  targetAudience String
+  contentDescription String
+  currentPlatforms String?
+  websiteSocialLinks String?
+  sampleVideoUrl String?
+  uploadedSampleFileUrl String?
+  monetizationGoals String?
+  distributionGoals String?
+  budgetRange String?
+  timeline String?
+  rightsConfirmation Boolean
+  status ApplicationStatus @default(pending)
+  adminNotes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id String @id @default(cuid())
+  name String
+  email String
+  phone String?
+  source String
+  interest String?
+  message String
+  status LeadStatus @default(new)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PricingPlan {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  priceLabel String
+  description String
+  features String[]
+  ctaLabel String
+  isActive Boolean @default(true)
+  sortOrder Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ResourceArticle {
+  id String @id @default(cuid())
+  title String
+  slug String @unique
+  excerpt String
+  content String
+  category String
+  imageUrl String?
+  isPublished Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ViewLog {
+  id String @id @default(cuid())
+  videoId String
+  networkId String
+  sessionId String
+  ipHash String?
+  userAgentHash String?
+  watchedSeconds Int @default(0)
+  counted Boolean @default(false)
+  createdAt DateTime @default(now())
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  network Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
+}
+
+model DistributionChecklist {
+  id String @id @default(cuid())
+  networkId String @unique
+  hasBranding Boolean @default(false)
+  hasContentLibrary Boolean @default(false)
+  hasTrailer Boolean @default(false)
+  hasRightsConfirmation Boolean @default(false)
+  hasMonetizationPlan Boolean @default(false)
+  hasAudienceStrategy Boolean @default(false)
+  hasPrivacyPolicy Boolean @default(false)
+  hasTerms Boolean @default(false)
+  isReadyForReview Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  network Network @relation(fields: [networkId], references: [id], onDelete: Cascade)
+}
+
+model SiteSetting {
+  id String @id @default(cuid())
+  key String @unique
+  value Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

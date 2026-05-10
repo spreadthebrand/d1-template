@@ -1,0 +1,2 @@
+import { ApplicationForm } from "@/components/Forms";
+export default function Apply(){ return <section className="section grid gap-10 lg:grid-cols-[.8fr_1.2fr]"><div><p className="font-bold uppercase tracking-widest text-gold">Apply</p><h1 className="mt-3 text-5xl font-black">Start or distribute a network</h1><p className="mt-5 text-slate-300">Submit your web-first network concept, sample content link, distribution goals, monetization vision, and rights confirmation for review.</p></div><ApplicationForm/></section> }

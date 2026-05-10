@@ -1,59 +1,50 @@
-# Worker + D1 Database
+# CCB Network — Connect, Create, & Build
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/d1-template)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftoptierprnews-source%2Fccb-worldwide.git&project-name=ccb-worldwide&repository-name=ccb-worldwide)
 
-![Worker + D1 Template Preview](https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/cb7cb0a9-6102-4822-633c-b76b7bb25900/public)
+CCB Network is a clean, from-scratch Next.js + Prisma + PostgreSQL platform for launching web-first creator streaming networks and preparing future distribution roadmaps.
 
-<!-- dash-content-start -->
+## Repository
 
-D1 is Cloudflare's native serverless SQL database ([docs](https://developers.cloudflare.com/d1/)). This project demonstrates using a Worker with a D1 binding to execute a SQL statement. A simple frontend displays the result of this query:
+- GitHub: <https://github.com/toptierprnews-source/ccb-worldwide.git>
+- Vercel deploy: <https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftoptierprnews-source%2Fccb-worldwide.git&project-name=ccb-worldwide&repository-name=ccb-worldwide>
 
-```SQL
-SELECT * FROM comments LIMIT 3;
+## Stack
+
+- Next.js App Router, TypeScript, Tailwind CSS
+- PostgreSQL with Prisma ORM
+- NextAuth credentials auth with admin/creator roles
+- Zod validation, React Hook Form, REST API routes
+- Local MVP uploads with S3/Stripe/email/TV platform placeholders
+
+## Important deployment note
+
+This repository is **not** a Cloudflare Workers/D1 template. There is no `wrangler.json`, Worker type file, or old D1 sample migration. Deploy it as a Next.js app with PostgreSQL.
+
+## Local setup
+
+```bash
+npm install
+cp .env.example .env
+npx prisma migrate dev --name init
+npm run prisma:seed
+npm run dev
 ```
 
-The D1 database is initialized with a `comments` table and this data:
+Default admin: `admin@ccbnetwork.local` / `ChangeMe123!`.
+Default creators: `creator1@ccbnetwork.local`, `creator2@ccbnetwork.local`, `creator3@ccbnetwork.local` / `Creator123!`.
 
-```SQL
-INSERT INTO comments (author, content)
-VALUES
-    ('Kristian', 'Congrats!'),
-    ('Serena', 'Great job!'),
-    ('Max', 'Keep up the good work!')
-;
+## Production deploy
+
+1. Use the GitHub repository `https://github.com/toptierprnews-source/ccb-worldwide.git`.
+2. Create a managed PostgreSQL database.
+3. Import the repo into Vercel or another Next.js host, not a Workers/D1 template.
+4. Set `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
+5. Deploy, then run `npm run db:deploy` and `npm run prisma:seed` once against production.
+
+## Checks
+
+```bash
+npm run typecheck
+npm run build
 ```
-
-> [!IMPORTANT]
-> When using C3 to create this project, select "no" when it asks if you want to deploy. You need to follow this project's [setup steps](https://github.com/cloudflare/templates/tree/main/d1-template#setup-steps) before deploying.
-
-<!-- dash-content-end -->
-
-## Getting Started
-
-Outside of this repo, you can start a new project with this template using [C3](https://developers.cloudflare.com/pages/get-started/c3/) (the `create-cloudflare` CLI):
-
-```
-npm create cloudflare@latest -- --template=cloudflare/templates/d1-template
-```
-
-A live public deployment of this template is available at [https://d1-template.templates.workers.dev](https://d1-template.templates.workers.dev)
-
-## Setup Steps
-
-1. Install the project dependencies with a package manager of your choice:
-   ```bash
-   npm install
-   ```
-2. Create a [D1 database](https://developers.cloudflare.com/d1/get-started/) with the name "d1-template-database":
-   ```bash
-   npx wrangler d1 create d1-template-database
-   ```
-   ...and update the `database_id` field in `wrangler.json` with the new database ID.
-3. Run the following db migration to initialize the database (notice the `migrations` directory in this project):
-   ```bash
-   npx wrangler d1 migrations apply --remote d1-template-database
-   ```
-4. Deploy the project!
-   ```bash
-   npx wrangler deploy
-   ```
