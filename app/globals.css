@@ -8,4 +8,9 @@ body { @apply bg-navy-950 text-white antialiased; }
 .label { @apply text-sm font-semibold text-slate-200; }
 .btn-primary { @apply inline-flex items-center justify-center rounded-full bg-electric px-6 py-3 font-bold text-white shadow-glow hover:bg-blue-400; }
 .btn-secondary { @apply inline-flex items-center justify-center rounded-full border border-gold/50 px-6 py-3 font-bold text-gold hover:bg-gold hover:text-navy-950; }
-.prose-ccb { @apply prose prose-invert max-w-none prose-a:text-electric prose-strong:text-white; }
+.prose-ccb { @apply max-w-none text-slate-300; }
+.prose-ccb h1 { @apply mb-6 text-5xl font-black text-white; }
+.prose-ccb h2 { @apply mt-8 text-3xl font-black text-white; }
+.prose-ccb p { @apply my-4 leading-7; }
+.prose-ccb a { @apply text-electric underline; }
+.prose-ccb strong { @apply text-white; }

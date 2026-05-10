@@ -1,2 +1,3 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server"; import { prisma } from "@/lib/prisma"; import { requireRole } from "@/lib/apiAuth";
 export async function GET(){ const auth=await requireRole("admin"); if(auth.error) return auth.error; const [views,videos,networks,applications,leads]=await Promise.all([prisma.viewLog.count(),prisma.video.count(),prisma.network.count(),prisma.application.count(),prisma.lead.count()]); return NextResponse.json({views,videos,networks,applications,leads}); }

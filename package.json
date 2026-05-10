@@ -14,10 +14,10 @@
     "prisma:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
-    "deploy:vercel": "vercel --prod"
+    "deploy:vercel": "vercel --prod",
+    "check:static": "node --check scripts/build.mjs && node --check scripts/prisma-generate.mjs"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
@@ -26,6 +26,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
+    "tslib": "^2.8.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -42,8 +43,15 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
-  "prisma": { "seed": "tsx prisma/seed.ts" },
-  "repository": { "type": "git", "url": "git+https://github.com/toptierprnews-source/ccb-worldwide.git" },
-  "bugs": { "url": "https://github.com/toptierprnews-source/ccb-worldwide/issues" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/toptierprnews-source/ccb-worldwide.git"
+  },
+  "bugs": {
+    "url": "https://github.com/toptierprnews-source/ccb-worldwide/issues"
+  },
   "homepage": "https://github.com/toptierprnews-source/ccb-worldwide#readme"
 }
