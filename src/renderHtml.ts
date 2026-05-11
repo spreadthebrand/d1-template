@@ -1,29 +1,143 @@
-export function renderHtml(content: string) {
-	return `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>D1</title>
-        <link rel="stylesheet" type="text/css" href="https://static.integrations.cloudflare.com/styles.css">
-      </head>
-    
-      <body>
-        <header>
-          <img
-            src="https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/30e0d3f6-6076-40f8-7abb-8a7676f83c00/public"
-          />
-          <h1>🎉 Successfully connected d1-template to D1</h1>
-        </header>
-        <main>
-          <p>Your D1 Database contains the following data:</p>
-          <pre><code><span style="color: #0E838F">&gt; </span>SELECT * FROM comments LIMIT 3;<br>${content}</code></pre>
-          <small class="blue">
-            <a target="_blank" href="https://developers.cloudflare.com/d1/tutorials/build-a-comments-api/">Build a comments API with Workers and D1</a>
-          </small>
-        </main>
-      </body>
-    </html>
-`;
+import { automationFlows, billingPlans, campaigns, dashboardStats, leads, linkTemplates, platformConfigs, scheduledPosts, templates, tones, topContent, workspaces } from "./appData";
+import { createMockAiPackage, repurposePackage, type AiPackage } from "./aiService";
+
+const json = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
+
+const sampleAi = createMockAiPackage({
+	topic: "studio booking campaign",
+	goal: "fill the weekly session calendar",
+	audience: "independent artists and podcasters",
+	offer: "book a discovery call",
+	tone: "Recording studio",
+	platform: "Instagram",
+	contentType: "reel caption",
+});
+
+const repurpose = repurposePackage("One Soundvibe helps creators turn one message into captions, email, SMS, schedule plans, link pages, and lead workflows.");
+
+function card(title: string, body: string, action = "Configure") {
+	return `<article class="card mini-card"><h3>${title}</h3><p>${body}</p><button class="ghost">${action}</button></article>`;
+}
+
+function optionList(values: string[]) {
+	return values.map((value) => `<option>${value}</option>`).join("");
+}
+
+function statusClass(status: string) {
+	return status.toLowerCase().replace(/\s+/g, "-");
+}
+
+export function renderHtml() {
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>1SV Content Engine | 1 Soundvibe</title>
+	<meta name="description" content="A creator content automation dashboard for 1 Soundvibe Entertainment, studios, artists, podcasters, event promoters, and small business owners." />
+	<style>
+		:root { --black:#050505; --panel:#101010; --panel-2:#17130c; --gold:#d8aa3d; --gold-2:#ffdf86; --white:#fffaf0; --muted:#bdb6a4; --line:rgba(216,170,61,.23); --danger:#ff6b6b; --success:#5ee6a8; --shadow:0 24px 80px rgba(0,0,0,.45); }
+		*{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:radial-gradient(circle at top left,rgba(216,170,61,.18),transparent 34rem),linear-gradient(135deg,#050505,#0d0a05 45%,#050505);color:var(--white);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif} a{color:inherit;text-decoration:none} button,input,textarea,select{font:inherit} .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;background:rgba(5,5,5,.92);border-right:1px solid var(--line);backdrop-filter:blur(18px);overflow:auto}.brand{display:flex;gap:12px;align-items:center;margin-bottom:26px}.mark{display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--gold);border-radius:16px;background:linear-gradient(135deg,#2f2308,var(--gold));color:#080604;font-weight:900;letter-spacing:-.08em}.brand h1{font-size:1.04rem;margin:0}.brand span{display:block;color:var(--muted);font-size:.74rem}.nav{display:grid;gap:5px}.nav a{padding:11px 12px;border-radius:14px;color:#e8dfc9;font-size:.92rem}.nav a:hover,.nav a.active{background:rgba(216,170,61,.13);color:var(--gold-2)}.role-card{margin-top:22px;padding:16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,rgba(216,170,61,.16),rgba(255,255,255,.04))}.main{padding:28px;overflow:hidden}.topbar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px}.eyebrow{color:var(--gold-2);font-size:.78rem;text-transform:uppercase;letter-spacing:.16em}.title{font-size:clamp(2rem,5vw,4.8rem);line-height:.96;margin:8px 0 14px;letter-spacing:-.07em;max-width:980px}.subtitle{color:#dfd7c4;font-size:1.08rem;max-width:780px;line-height:1.7}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn,.ghost{border:0;border-radius:999px;padding:12px 16px;cursor:pointer;font-weight:800}.btn{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#090806;box-shadow:0 10px 36px rgba(216,170,61,.2)}.ghost{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--white)}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(5,minmax(0,1fr));margin:24px 0}.card{border:1px solid var(--line);border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.08),rgba(255,255,255,.025));box-shadow:var(--shadow)}.stat{padding:18px}.stat b{display:block;font-size:2rem;letter-spacing:-.05em}.stat span,.muted{color:var(--muted)}section{scroll-margin-top:24px;margin:28px 0}.section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}.section-head h2{margin:0;font-size:1.8rem;letter-spacing:-.04em}.section-head p{margin:.35rem 0 0;color:var(--muted)}.two{grid-template-columns:1.15fr .85fr}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}.panel{padding:20px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:13px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top}.table th{color:var(--gold-2);font-size:.78rem;text-transform:uppercase;letter-spacing:.11em}.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(216,170,61,.09);font-size:.8rem}.scheduled,.published,.booked{color:var(--success)}.failed,.lost{color:var(--danger)}.draft,.new,.contacted{color:var(--gold-2)}.form{display:grid;gap:12px}.form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{display:grid;gap:7px;color:#f3ead5;font-weight:700;font-size:.9rem}input,textarea,select{width:100%;border:1px solid rgba(216,170,61,.25);background:rgba(0,0,0,.32);color:var(--white);border-radius:16px;padding:13px}textarea{min-height:112px;resize:vertical}.output{white-space:pre-wrap;background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:14px;color:#f7edd7;line-height:1.6}.mini-card{padding:18px}.mini-card h3{margin:0 0 8px}.mini-card p{color:var(--muted);line-height:1.55}.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}.day{min-height:96px;border:1px solid rgba(216,170,61,.2);border-radius:18px;background:rgba(255,255,255,.04);padding:10px}.day b{color:var(--gold-2)}.chart-line,.chart-bars,.chart-pie{height:260px;border-radius:22px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(216,170,61,.16),rgba(255,255,255,.03));position:relative;overflow:hidden}.chart-line:before{content:"";position:absolute;inset:30px;background:linear-gradient(135deg,transparent 10%,rgba(216,170,61,.15) 10% 11%,transparent 11% 32%,rgba(216,170,61,.4) 32% 33%,transparent 33% 55%,rgba(255,223,134,.8) 55% 56%,transparent 56%);border-bottom:2px solid var(--gold);transform:skewY(-8deg)}.chart-bars{display:flex;align-items:end;gap:16px;padding:24px}.bar{flex:1;border-radius:14px 14px 0 0;background:linear-gradient(180deg,var(--gold-2),var(--gold));min-height:40px}.chart-pie{background:conic-gradient(var(--gold) 0 42%,#f4d78b 42% 68%,#70551d 68% 84%,#282013 84%)}.notice{padding:14px 16px;border-radius:16px;border:1px solid rgba(255,223,134,.4);background:rgba(216,170,61,.11);color:#fff2cf}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid var(--line);font-size:.84rem}.phone{max-width:340px;margin:auto;border:1px solid var(--line);border-radius:36px;padding:18px;background:#080808}.phone-screen{border-radius:28px;background:linear-gradient(180deg,#17130c,#050505);padding:20px;text-align:center}.avatar{width:82px;height:82px;border-radius:50%;margin:auto;background:linear-gradient(135deg,var(--gold),#fff1bf);color:#090806;display:grid;place-items:center;font-weight:900}.link-button{display:block;margin:10px 0;padding:13px;border-radius:15px;background:var(--white);color:#090806;font-weight:800}.footer{color:var(--muted);padding:26px 0 8px}.mobile-menu{display:none}.auth-shell{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.auth-box{padding:18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid var(--line)}.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;color:#ffe7a7}.small{font-size:.85rem}@media(max-width:1080px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.nav{grid-template-columns:repeat(2,1fr)}.stats,.four,.three,.two{grid-template-columns:1fr 1fr}.main{padding:20px}}@media(max-width:720px){.stats,.four,.three,.two,.form-row,.auth-shell{grid-template-columns:1fr}.topbar,.section-head{align-items:flex-start;flex-direction:column}.calendar{grid-template-columns:1fr 1fr}.title{font-size:2.45rem}.main{padding:16px}.sidebar{padding:18px}.table{font-size:.86rem}.table th:nth-child(3),.table td:nth-child(3){display:none}}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<aside class="sidebar">
+			<a class="brand" href="#dashboard"><div class="mark">1SV</div><div><h1>Content Engine</h1><span>1 Soundvibe automation suite</span></div></a>
+			<nav class="nav">
+				${["Dashboard","AI Generator","Repurpose","Calendar","Automations","Leads","Link Pages","Analytics","Campaigns","Templates","Settings","Admin"].map((name, index) => `<a class="${index === 0 ? "active" : ""}" href="#${name.toLowerCase().replace(/\s+/g,"-")}">${name}</a>`).join("")}
+			</nav>
+			<div class="role-card"><div class="eyebrow">Workspace</div><strong>1 Soundvibe Studios</strong><p class="muted small">Role-ready access: Owner, Admin, Team Member, Client.</p></div>
+		</aside>
+		<main class="main">
+			<div class="topbar"><div><div class="eyebrow">Luxury creator operations platform</div><h1 class="title">Create once. Repurpose everywhere. Convert the attention.</h1><p class="subtitle">1SV Content Engine is an original planning, AI generation, scheduling, automation planning, link-in-bio, CRM, and analytics workspace for creators and client brands.</p></div><div class="actions"><button class="btn" data-scroll="ai-generator">Create Content</button><button class="ghost" data-scroll="calendar">Schedule Post</button></div></div>
+			<section id="dashboard">
+				<div class="grid stats">${dashboardStats.map((stat) => `<article class="card stat"><span>${stat.label}</span><b>${stat.value}</b><span>${stat.trend}</span></article>`).join("")}</div>
+				<div class="actions"><button class="btn" data-scroll="ai-generator">Create Content</button><button class="ghost" data-scroll="calendar">Schedule Post</button><button class="ghost" data-scroll="campaigns">Build Campaign</button><button class="ghost" data-scroll="link-pages">Create Link Page</button><button class="ghost" data-scroll="leads">View Leads</button></div>
+				<div class="grid two" style="margin-top:16px"><article class="card panel"><div class="section-head"><div><h2>Top performing content</h2><p>Mock analytics now, API-ready later.</p></div></div><table class="table"><thead><tr><th>Content</th><th>Platform</th><th>Result</th><th>Score</th></tr></thead><tbody>${topContent.map((item) => `<tr><td>${item.title}</td><td>${item.platform}</td><td>${item.result}</td><td><span class="pill">${item.score}</span></td></tr>`).join("")}</tbody></table></article><article class="card panel"><h2>Workspace snapshot</h2><p class="muted">Default brands and clients are preloaded for fast demos.</p><div class="grid">${workspaces.map((workspace) => `<div class="notice"><strong>${workspace.name}</strong><br><span class="small">${workspace.tone} · ${workspace.offer}</span></div>`).join("")}</div></article></div>
+			</section>
+
+			<section id="auth-system"><div class="section-head"><div><h2>Auth system</h2><p>Supabase-ready flows for signup, login, reset, profile, workspace selection, and role-based access.</p></div></div><div class="auth-shell">${["Sign up","Login","Forgot password"].map((name) => `<div class="auth-box"><h3>${name}</h3><label>Email<input placeholder="you@brand.com"></label><label>Password<input type="password" placeholder="••••••••"></label><button class="btn">${name}</button></div>`).join("")}</div></section>
+
+			<section id="workspaces"><div class="section-head"><div><h2>Workspaces</h2><p>Manage brands, clients, colors, tone, audience, offers, websites, and social profiles.</p></div><button class="btn">New Workspace</button></div><div class="grid four">${workspaces.map((workspace) => card(workspace.name, `${workspace.tagline}<br><br><span class="pill">${workspace.colors}</span><br>${workspace.audience}`, "Edit brand profile")).join("")}</div></section>
+
+			<section id="ai-generator"><div class="section-head"><div><h2>AI content generator</h2><p>Uses <span class="code">OPENAI_API_KEY</span> when configured. Without a key, strong mock content keeps the app usable.</p></div><button id="generateBtn" class="btn">Generate package</button></div><div class="grid two"><article class="card panel"><form class="form" id="aiForm"><div class="form-row"><label>Topic<input name="topic" value="Studio booking campaign"></label><label>Content goal<input name="goal" value="Fill the weekly session calendar"></label></div><div class="form-row"><label>Target audience<input name="audience" value="Independent artists and podcasters"></label><label>Offer / CTA<input name="offer" value="Book a discovery call"></label></div><div class="form-row"><label>Tone<select name="tone">${optionList(tones)}</select></label><label>Platform<select name="platform">${optionList(platformConfigs.map((platform) => platform.name))}</select></label></div><label>Content type<select name="contentType">${optionList(["Instagram caption","TikTok caption","YouTube Shorts","Facebook post","LinkedIn post","X/Twitter post","Email blast","SMS message","Blog post","Reel hook"])}</select></label></form></article><article class="card panel"><h3>Generated outputs</h3><div id="aiOutput" class="output">${formatAi(sampleAi)}</div><div class="actions" style="margin-top:12px"><button class="ghost" data-export="captions.txt">Export TXT</button><button class="ghost" data-copy="aiOutput">Copy All</button></div></article></div></section>
+
+			<section id="repurpose"><div class="section-head"><div><h2>Content repurposer</h2><p>Paste one idea, video prompt, transcript, or campaign topic and convert it into a full package.</p></div></div><div class="grid two"><article class="card panel"><label>Source content<textarea id="repurposeInput">One Soundvibe helps creators turn one message into captions, email, SMS, schedule plans, link pages, and lead workflows.</textarea></label><div class="actions" style="margin-top:12px"><button class="btn" id="repurposeBtn">Repurpose</button><button class="ghost" data-export="repurpose.csv">Export CSV</button><button class="ghost">Save to Library</button><button class="ghost">Send to Calendar</button></div></article><article class="card panel"><div id="repurposeOutput" class="output">${formatRepurpose(repurpose)}</div></article></div></section>
+
+			<section id="calendar"><div class="section-head"><div><h2>Content calendar / scheduler</h2><p>Month, week, day, and list views with API placeholders. Social posting is disabled until official platform APIs are connected.</p></div><div class="tabs"><span class="tab">Month</span><span class="tab">Week</span><span class="tab">Day</span><span class="tab">List</span></div></div><div class="notice">No live posting happens in this demo. Connect approved API credentials before publishing to Meta, TikTok, YouTube, LinkedIn, X, or Pinterest.</div><div class="grid two" style="margin-top:14px"><article class="card panel"><div class="calendar">${Array.from({length:14},(_,i)=>`<div class="day"><b>${i+11}</b><p class="small muted">${i%3===0?"Studio reel · 10 AM":i%4===0?"Email blast":""}</p></div>`).join("")}</div></article><article class="card panel"><h3>Create scheduled post</h3><form class="form"><div class="form-row"><label>Platform<select>${optionList(platformConfigs.map((platform) => platform.name))}</select></label><label>Status<select>${optionList(["Draft","Scheduled","Published","Failed"])}</select></label></div><label>Caption<textarea placeholder="Write the platform-specific caption"></textarea></label><div class="form-row"><label>Date/time<input type="datetime-local"></label><label>Campaign tag<input placeholder="Studio Booking Push"></label></div><label>CTA<input placeholder="Book now"></label><label>Media upload<input type="file"></label><button class="btn" type="button">Save scheduled post</button></form></article></div><article class="card panel" style="margin-top:14px"><table class="table"><thead><tr><th>Platform</th><th>Caption</th><th>Date/time</th><th>Campaign</th><th>Status</th></tr></thead><tbody>${scheduledPosts.map((post) => `<tr><td>${post.platform}</td><td>${post.caption}</td><td>${post.time}</td><td>${post.campaign}</td><td class="${statusClass(post.status)}">${post.status}</td></tr>`).join("")}</tbody></table></article></section>
+
+			<section id="automations"><div class="section-head"><div><h2>Comment and DM automation builder</h2><p>ManyChat-style planning flows for keyword triggers, public replies, DMs, lead capture, tags, and toggles.</p></div><button class="btn">New Flow</button></div><div class="notice">Use only with connected accounts and platform-approved permissions. Do not send spam, scrape private data, or auto-message without user permission and API compliance.</div><div class="grid two" style="margin-top:14px"><article class="card panel"><form class="form"><div class="form-row"><label>Keyword trigger<select>${optionList(["STUDIO","BOOK","VC","RELAX","QUOTE","PRICE"])}</select></label><label>Platform<select>${optionList(platformConfigs.map((platform) => platform.name))}</select></label></div><label>Comment reply message<input value="Just sent you the booking info."></label><label>DM message<textarea>Thanks for reaching out. Here’s the booking link: [link]. What date are you looking for?</textarea></label><label>Follow-up message<textarea>Still interested? Reply with your preferred date and we will help you lock it in.</textarea></label><div class="form-row"><label>Booking link / delivery<input value="https://1soundvibe.example/book"></label><label>Tag lead<input value="Studio Lead"></label></div><label><input type="checkbox" checked> Start automation</label></form></article><article class="card panel"><table class="table"><thead><tr><th>Trigger</th><th>Platform</th><th>Reply</th><th>Lead tag</th><th>Status</th></tr></thead><tbody>${automationFlows.map((flow) => `<tr><td><span class="pill">${flow.trigger}</span></td><td>${flow.platform}</td><td>${flow.reply}</td><td>${flow.tag}</td><td>${flow.active ? "On" : "Off"}</td></tr>`).join("")}</tbody></table></article></div></section>
+
+			<section id="leads"><div class="section-head"><div><h2>Lead CRM</h2><p>Track name, email, phone, Instagram, source, trigger, interested service, status, notes, owner, and follow-up date.</p></div><button class="ghost" data-export="leads.csv">Export leads CSV</button></div><article class="card panel"><table class="table"><thead><tr><th>Name</th><th>Contact</th><th>Source</th><th>Keyword</th><th>Service</th><th>Status</th><th>Follow-up</th></tr></thead><tbody>${leads.map((lead) => `<tr><td>${lead.name}<br><span class="muted small">${lead.handle}</span></td><td>${lead.email}<br>${lead.phone}</td><td>${lead.source}</td><td>${lead.keyword}</td><td>${lead.service}</td><td class="${statusClass(lead.status)}">${lead.status}</td><td>${lead.followUp}</td></tr>`).join("")}</tbody></table></article></section>
+
+			<section id="link-pages"><div class="section-head"><div><h2>Link-in-bio builder</h2><p>Build branded pages with buttons, music, booking, event tickets, YouTube, socials, QR codes, V-card downloads, and custom themes.</p></div><button class="btn">Create Link Page</button></div><div class="grid two"><article class="card panel"><div class="grid three">${linkTemplates.map((template) => card(template, "Template includes editable colors, buttons, bio, social links, QR export, and V-card fields.", "Use template")).join("")}</div></article><article class="card panel"><div class="phone"><div class="phone-screen"><div class="avatar">1SV</div><h3>1 Soundvibe Studios</h3><p class="muted">Recording · Podcast · Content</p><a class="link-button">Book a session</a><a class="link-button">Listen to new release</a><a class="link-button">Event tickets</a><a class="link-button">Download V-card</a><div class="notice small">QR code export placeholder</div></div></div></article></div></section>
+
+			<section id="analytics"><div class="section-head"><div><h2>Analytics dashboard</h2><p>Mock dashboards for post performance, platform comparison, engagement, clicks, leads, posting times, hashtags, and ROI.</p></div></div><div class="grid three"><article class="card panel"><h3>Growth line</h3><div class="chart-line"></div></article><article class="card panel"><h3>Platform comparison</h3><div class="chart-bars"><div class="bar" style="height:85%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:45%"></div><div class="bar" style="height:72%"></div></div></article><article class="card panel"><h3>Lead sources</h3><div class="chart-pie"></div></article></div></section>
+
+			<section id="campaigns"><div class="section-head"><div><h2>Campaign builder</h2><p>Create goals, timelines, offers, target audience, platforms, content frequency, and AI-generated plans.</p></div><button class="btn">Generate content plan</button></div><div class="grid three">${campaigns.map((campaign) => card(campaign.name, `<strong>${campaign.goal}</strong><br>${campaign.dates}<br>${campaign.offer}<br><span class="pill">${campaign.frequency}</span>`, "Open campaign")).join("")}</div><article class="card panel" style="margin-top:14px"><h3>PDF-ready campaign plan export</h3><div class="output">Campaign Plan HTML → Hero goal, audience, offer, channel mix, weekly calendar, asset list, KPI forecast, compliance notes.</div><button class="ghost" data-export="campaign-plan.html">Export PDF-ready HTML</button></article></section>
+
+			<section id="templates"><div class="section-head"><div><h2>Template library</h2><p>Reusable content blocks, scripts, captions, emails, SMS, follow-ups, and testimonial formats.</p></div><button class="btn">New Template</button></div><div class="grid three">${templates.map((template) => card(template, "Editable brand-safe prompt, copy block, variables, and recommended placement.", "Use template")).join("")}</div></section>
+
+			<section id="settings"><div class="section-head"><div><h2>Settings and integrations</h2><p>Clear API configuration areas are ready for future posting and analytics connections.</p></div></div><div class="grid three">${platformConfigs.map((platform) => card(platform.name, `${platform.api}<br><span class="pill">${platform.status}</span>`, "Add credentials")).join("")}</div><div class="grid three" style="margin-top:14px">${billingPlans.map((plan) => card(plan.name, `<strong>${plan.price}</strong><br>${plan.features}`, "Stripe placeholder")).join("")}</div></section>
+
+			<section id="admin"><div class="section-head"><div><h2>Admin panel</h2><p>Manage users, workspaces, plans, usage, templates, automations, and system logs.</p></div></div><div class="grid four">${["Users","Workspaces","Plans","Usage","Templates","Automations","System logs","Storage"].map((name) => card(name, "Administrative table placeholder with Supabase policies and audit trail support.", "Manage")).join("")}</div></section>
+			<footer class="footer">© 2026 1 Soundvibe Entertainment. Original SaaS interface. Social API posting disabled until approved credentials are connected.</footer>
+		</main>
+	</div>
+	<script>
+		const initialAi = ${json(sampleAi)};
+		const platformConfigs = ${json(platformConfigs)};
+		function formatAi(pkg){return ['Instagram: '+pkg.instagram,'TikTok: '+pkg.tiktok,'YouTube Shorts Title: '+pkg.youtubeTitle,'YouTube Description: '+pkg.youtubeDescription,'Facebook: '+pkg.facebook,'LinkedIn: '+pkg.linkedin,'X/Twitter: '+pkg.x,'Email Blast:\n'+pkg.email,'SMS: '+pkg.sms,'Blog Post:\n'+pkg.blog,'Reel Hook: '+pkg.hook,'Hashtags: '+pkg.hashtags.join(' '),'Video Overlay Text: '+pkg.overlays.join(' | ')].join('\n\n')}
+		function mockAi(data){const topic=data.get('topic')||'creator offer'; const goal=data.get('goal')||'generate leads'; const audience=data.get('audience')||'creators'; const offer=data.get('offer')||'book now'; const tone=data.get('tone')||'Luxury'; return {instagram:'Built for '+audience+': '+topic+' with a '+tone+' tone. Make the next move simple — '+offer+'.',tiktok:'POV: '+topic+' turns into a clean content system that helps you '+goal+'. '+offer+'.',youtubeTitle:topic+': Short-Form Rollout Plan',youtubeDescription:'Use this Shorts description to move '+audience+' from attention to action. Goal: '+goal+'. CTA: '+offer+'.',facebook:'This is your reminder that '+topic+' needs a plan, not pressure. If you want to '+goal+', '+offer+'.',linkedin:'Content operations matter. Topic: '+topic+'. Audience: '+audience+'. Goal: '+goal+'. CTA: '+offer+'.',x:topic+' + clear CTA + repeatable system = better creator growth. '+offer+'.',email:'Subject: Your plan for '+topic+'\n\nHere is the rollout: hook, proof, offer, follow-up. Goal: '+goal+'. CTA: '+offer+'.',sms:'Quick update: '+topic+' is ready. '+offer+'.',blog:'# '+topic+'\n\nUse one core idea, adapt by channel, and track results against '+goal+'.',hook:'Stop guessing. Turn '+topic+' into a conversion system.',hashtags:['#1Soundvibe','#ContentEngine','#CreatorTools','#MarketingAutomation','#BrandGrowth','#StudioLife','#LeadGeneration','#SocialScheduler','#CampaignBuilder','#LuxuryBrand'],overlays:['One idea. Ten assets.','Hook. Proof. CTA.','Built for creators.','Turn comments into leads.']}}
+		document.querySelectorAll('[data-scroll]').forEach((button)=>button.addEventListener('click',()=>document.getElementById(button.dataset.scroll).scrollIntoView({behavior:'smooth'})));
+		document.getElementById('generateBtn').addEventListener('click',()=>{const form=new FormData(document.getElementById('aiForm')); document.getElementById('aiOutput').textContent=formatAi(mockAi(form));});
+		document.getElementById('repurposeBtn').addEventListener('click',()=>{const value=document.getElementById('repurposeInput').value||'Create a campaign.'; document.getElementById('repurposeOutput').textContent=['5 Short-form captions',...Array.from({length:5},(_,i)=>(i+1)+'. '+value+' Angle '+(i+1)+' with CTA.'),'','3 Story posts','1. Poll sticker','2. Proof slide','3. Booking CTA','','Email','Subject: A focused next step\n'+value,'','SMS',value.slice(0,120)+' Tap the link.','','Blog','Repurpose this into education, proof, objection handling, and offer posts.','','10 Hashtags','#1Soundvibe #ContentRepurposing #CreatorBusiness #StudioMarketing #CampaignPlan #SocialMedia #LeadCRM #LinkInBio #Automation #BrandGrowth','','5 CTA options','Book now | Get details | Join the list | Claim your spot | Send your goal','','Suggested schedule','Mon hook, Tue story, Wed education, Thu proof, Fri CTA'].join('\n');});
+		document.querySelectorAll('[data-copy]').forEach((button)=>button.addEventListener('click',()=>navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent)));
+		document.querySelectorAll('[data-export]').forEach((button)=>button.addEventListener('click',()=>{const blob=new Blob(['1SV Content Engine export\n\n'+document.body.innerText],{type:'text/plain'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=button.dataset.export; a.click(); URL.revokeObjectURL(url);}));
+	</script>
+</body>
+</html>`;
+}
+
+function formatAi(pkg: AiPackage) {
+	return [
+		`Instagram: ${pkg.instagram}`,
+		`TikTok: ${pkg.tiktok}`,
+		`YouTube Shorts Title: ${pkg.youtubeTitle}`,
+		`YouTube Description: ${pkg.youtubeDescription}`,
+		`Facebook: ${pkg.facebook}`,
+		`LinkedIn: ${pkg.linkedin}`,
+		`X/Twitter: ${pkg.x}`,
+		`Email Blast:\n${pkg.email}`,
+		`SMS: ${pkg.sms}`,
+		`Blog Post:\n${pkg.blog}`,
+		`Reel Hook: ${pkg.hook}`,
+		`Hashtags: ${pkg.hashtags.join(" ")}`,
+		`Video Overlay Text: ${pkg.overlays.join(" | ")}`,
+	].join("\n\n");
+}
+
+function formatRepurpose(pkg: ReturnType<typeof repurposePackage>) {
+	return [
+		"5 Short-form captions",
+		...pkg.captions.map((caption, index) => `${index + 1}. ${caption}`),
+		"",
+		"3 Story posts",
+		...pkg.stories.map((story, index) => `${index + 1}. ${story}`),
+		"",
+		`Email\n${pkg.email}`,
+		"",
+		`SMS\n${pkg.sms}`,
+		"",
+		`Blog\n${pkg.blog}`,
+		"",
+		`YouTube Description\n${pkg.youtube}`,
+		"",
+		`10 Hashtags\n${pkg.hashtags.join(" ")}`,
+		"",
+		`5 CTA options\n${pkg.ctas.join(" | ")}`,
+		"",
+		`Suggested posting schedule\n${pkg.schedule.join("\n")}`,
+	].join("\n");
 }
