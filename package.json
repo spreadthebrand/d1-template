@@ -1,6 +1,6 @@
 {
-	"name": "d1-template",
-	"description": "Cloudflare's native serverless SQL database.",
+	"name": "1sv-content-engine",
+	"description": "Original 1 Soundvibe creator content automation platform prototype.",
 	"cloudflare": {
 		"label": "Worker + D1 Database",
 		"products": [
